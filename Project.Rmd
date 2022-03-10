@@ -72,6 +72,8 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ggpubr)
+library(ggridges)
+library(agricolae)
 
 flights <- read.csv("./jantojun2020.csv")
 us_states <- read.csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
@@ -159,7 +161,7 @@ d_pval_table # p-value table
 ```
 
 ### 1.6.2 Visualization 
-```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 #OPTIONAL
 for (i in 1:(ncol(c_clean1))) { # histograms of all continuous columns: raw vs. processed
   print(ggplot() + 
@@ -273,4 +275,132 @@ ggplot(gather(d_clean1), aes(value)) + # processed discrete data density plots (
         axis.ticks.x=element_blank())
 ```
 
-test :)
+## Jonah's Section (Temporary Title)
+Create smaller data frame to focus on the relationship between arrival delay with distance, origin, and (covid) deaths. 
+```{r}
+slim_data = fulldata3 %>% 
+  select(ARR_DELAY, DISTANCE, ORIGIN, ORIGIN_STATE_NM, deaths)
+
+names(slim_data) = tolower(names(slim_data))
+
+#speed up initial plot development by randomly sampling 10% of the population
+sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
+slim_sample = slim_data[sample_row_index,]
+```
+
+### Arrival Delay and Distance
+The correlation between these variables is low, so I dont expect to find that distance will be helpful in predicting arrival delay
+```{r}
+no_delay = sum(slim_sample$arr_delay <= 0) / length(slim_sample$arr_delay) 
+correlation = cor(slim_sample$arr_delay, slim_sample$distance)
+```
+
+Interesting pattern. It seems that most of the high arrival delays occur when the distance is short (< 1500 miles). Even given this, there does not appear to be a clear pattern that would suggest that these variables are closely related.
+```{r}
+ggplot(slim_sample, aes(distance, arr_delay)) +
+  geom_point() +
+  labs(x = "Distance (Miles)",
+       y = "Arrival Delay (Minutes)",
+       title = "Distance vs Arrival Delay")
+```
+This is the distribution of arrival delays with distance grouped in 1000 mile bins. Both high and low outliers have been filtered out. All distributions seem nearly identical. Notice that the third quartile is about zero for all distributions, meaning that most of the flights actually arrive early.
+```{r}
+
+#calculate quantiles to filter out outliers 
+iqr =  quantile(slim_sample$arr_delay, 0.75) - quantile(slim_sample$arr_delay, 0.25)
+upper_outlier_q = quantile(slim_sample$arr_delay, 0.75) + 1.5 * iqr
+lower_outlier_q = quantile(slim_sample$arr_delay, 0.25) - 1.5 * iqr
+
+slim_sample %>% 
+  filter(arr_delay <= upper_outlier_q) %>% 
+  filter(arr_delay >= lower_outlier_q) %>% 
+ggplot(aes(distance, arr_delay)) +
+  geom_boxplot(aes(group = cut_width(distance, 1000))) +
+  labs(x = "Distance", 
+       y = "Arrival Delay",
+       title = "Arrival Delay Grouped in 1000 Mile Bins w/o Outliers")
+```
+On "short" flights, there appears to be no association between distance and arrival delay. Switching the equality sign revelas that flights longer than 1500 miles dont appear to have any clear pattern that would be useful in estimating arrival delay 
+```{r}
+slim_sample %>% 
+  filter(distance < 1500) %>% 
+ggplot(aes(distance, arr_delay)) +
+  geom_point() +
+  labs(x = "Distance (Miles)",
+       y = "Arrival Delay (Minutes)",
+       title = "Distance vs Arrival Delay (Distance < 1500 Miles)"
+  )
+  
+```
+In summary, I see explanatory relationship between distance and arrival delay
+
+## Arrival Delay and Deaths
+Weak correlation between deaths and arrival delay. 58% of days have no covid deaths. Scatterplot shows no hints of a relationship either
+```{r}
+cor(slim_sample$arr_delay, slim_sample$deaths)
+
+zero_death_days = sum(slim_sample$deaths == 0) / length(slim_sample$deaths)
+
+ggplot(slim_sample, aes(deaths, arr_delay)) +
+  geom_point() +
+  labs(x = "Covid Related Deaths",
+       y = "Arrival Delay",
+       title = "Covid Deaths vs Arrival Delay")
+```
+Fitting a linear model of arrival delay modeled by deaths shows that the coefficient of deaths is 0.0007. Clearly no predictive power. In summary, deaths is not found to be important in predicting arrival delays too
+```{r}
+lm = lm(arr_delay ~ deaths, data = slim_sample)
+```
+
+## Arrival Delay and Origin
+Group by origin and find average delay for each. Then take the 10 that are the shortest delays on average, and the 10 that are the longest delays on average. Note there are 373 unique origins. 
+```{r}
+longest_origin_delays = slim_sample %>% 
+  group_by(origin) %>% 
+  summarize(mean_delay = mean(arr_delay)) %>% 
+  arrange(desc(mean_delay)) %>% 
+  head(10)
+
+shortest_origin_delays = slim_sample %>% 
+  group_by(origin) %>% 
+  summarize(mean_delay = mean(arr_delay)) %>% 
+  arrange(desc(mean_delay)) %>% 
+  tail(10)
+```
+
+```{r}
+ggplot(longest_origin_delays) + 
+  geom_col(aes(rev(reorder(origin, mean_delay)), mean_delay)) +
+  labs(x = "Origin", 
+       y = "Mean Delay (Minutes)",
+       title = "10 Worst Cities to Fly From")
+```
+
+```{r}
+ggplot(shortest_origin_delays) + 
+  geom_col(aes(reorder(origin, mean_delay), abs(mean_delay))) +
+  labs(x = "Origin", 
+       y = "Mean Minutes Arrived Early",
+       title = "10 Best Cities to Fly From")
+```
+Fit a one way anova model to see if origin affects arrival delay. Value is essentially zero, meaning that at least one origin has an arrival delay mean that is different from the rest. Unsurprising that the null was rejected. Will explore this further in the refinement stage.
+```{r}
+model = aov(arr_delay ~ origin, data = slim_sample)
+results = anova(model)
+```
+Same tables as above only for states instead of specific airports
+```{r}
+worst_states = slim_sample %>% 
+  group_by(origin_state_nm) %>% 
+  summarize(mean_delay = mean(arr_delay)) %>% 
+  arrange(desc(mean_delay)) %>% 
+  head(10)
+
+best_states = slim_sample %>% 
+  group_by(origin_state_nm) %>% 
+  summarize(mean_delay = mean(arr_delay)) %>% 
+  arrange(desc(mean_delay)) %>% 
+  tail(10)
+```
+
+
