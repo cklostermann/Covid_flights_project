@@ -654,3 +654,59 @@ airTime_model = lm(AIR_TIME ~ ARR_DELAY, data = selected_data)
 summary(airTime_model)
 ```
 
+## Kelsey's Section
+```{r}
+slim_data3 = fulldata3 %>% 
+  select(ARR_DELAY, FL_DATE, cases, DEST_STATE_NM, ORIGIN_STATE_NM)
+names(slim_data3) = tolower(names(slim_data3))
+#speed up initial plot development by randomly sampling 10% of the population
+samplerowindex = sample(1:nrow(slim_data3), nrow(slim_data3)/10)
+slim_sample3 = slim_data3[samplerowindex,]
+
+library("tsibble")
+library("tsibbledata")
+library("lubridate")
+library("feasts")
+
+```
+
+## We will plot arrival delay versus origin state of the flight. We can see that there are trends with some origin states and arrival delays.  For example, Hawaii, Alaska, and all territories have a greater arrival delay than average.
+```{r}
+ggplot(slim_data3, aes(arr_delay, origin_state_nm))+
+  geom_boxplot()+
+  theme(axis.text.y = element_text(size = 5))+
+  labs(x="Arrival Delay", y="Origin State")+
+  scale_x_sqrt()
+```
+
+
+## We will plot arrival delay versus destination state of the flight.  As we can see, destination state and arrival delay have trends.  For example, Alaska and all of the territories have a greater than average arrival delay.
+```{r}
+ggplot(slim_data3, aes(arr_delay, dest_state_nm))+
+  geom_boxplot()+
+  theme(axis.text.y = element_text(size = 5))+
+  labs(x="Arrival Delay", y="Destination State")+
+  scale_x_sqrt()
+```
+## We will plot cases versus destination states.  This plot shows the range of cases throughout the days.  Some states have a large range, extending from zero to the max, but some have a short range.  This would be interesting to compare with delays per state.
+```{r}
+ggplot(slim_data3, aes(cases, dest_state_nm))+
+  geom_point()+
+  theme(axis.text = element_text(size = 5))+
+  labs(x="Cases", y="Destination State Name")
+```
+## We will plot cases versus origin states.  We can see that New York is by far the forerunner for number of cases.
+```{r}
+ggplot(slim_data3, aes(cases, origin_state_nm))+
+  geom_point()+
+  theme(axis.text = element_text(size = 5))+
+  labs(x="Cases", y="Origin State Name")
+```
+
+## We will plot flight date versus cases for comparison of above analyzation.  We can see that in April there is a large spike in cases, suggesting that the max cases in the above graphs came from these months including and following April.
+```{r}
+ggplot(slim_data3, aes(fl_date, cases))+
+  geom_point()+
+  labs(x="Flight Date", y="Cases")
+```
+
