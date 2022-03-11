@@ -402,9 +402,100 @@ best_states = slim_sample %>%
   arrange(desc(mean_delay)) %>% 
   tail(10)
 ```
-#Haoxuan's work
-```{r}
 
+
+#Haoxuan's Section
+```{r}
+library(patchwork)
+selected_data = fulldata3 %>% 
+  select(ARR_DELAY, ORIGIN_STATE_NM, FL_DATE, AIR_TIME, cases)
 ```
 
+#Plotting Date vs Arrival Delay with faciting.
+#The delay has a decreasing trend over time. It has a higher delay time before April among all states on average.
+
+```{r, fig.height = 20, fig.width = 25}
+ggplot(selected_data) + 
+  geom_line(aes(FL_DATE, ARR_DELAY, col = ORIGIN_STATE_NM)) + 
+  facet_wrap(. ~ ORIGIN_STATE_NM) + 
+  theme(legend.title = element_text(size = 10), 
+        legend.text = element_text(size = 10)) + 
+  theme_bw() + 
+  labs(x = "Date", y = "Arrival Delay (mins)", title = "Delay Changes Over Days")
+```
+
+#Comparing Mean Cases and Mean Delay
+#Calculate the mean cases and mean delay grouped by the origin state. It does not show that there are any correltation beteewn cases and mean delay.
+
+```{r, fig.height = 20, fig.width = 25}
+mean_cases = selected_data %>% 
+  group_by(ORIGIN_STATE_NM) %>% 
+  summarise(cases = mean(cases))
+
+mean_delay = selected_data %>% 
+  group_by(ORIGIN_STATE_NM) %>% 
+  summarise(delay = mean(ARR_DELAY))
+
+casesPlot = ggplot(mean_cases) + 
+  geom_col(aes(cases, reorder(ORIGIN_STATE_NM, cases), fill = ORIGIN_STATE_NM)) + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  theme_bw() + 
+  theme(legend.position="none") + 
+  labs(x = "Mean Covid Cases", y = "States")
+
+delayPlot = ggplot(mean_delay) + 
+  geom_col(aes(delay, reorder(ORIGIN_STATE_NM, delay), fill = ORIGIN_STATE_NM)) + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  theme_bw() + 
+  labs(x = "Mean Arrival Delay (mins)", y = "States")
+
+casesPlot + delayPlot
+```
+
+#Plotting Cases vs Arrival Delay
+# no clear pattern shown in the scatter plot, there are too many data points with no cases, and no clear pattern shown
+
+```{r}
+ggplot(selected_data) + 
+  geom_point(aes(cases, ARR_DELAY))
+             size = 0.5, alpha = 0.7) +
+  theme_bw() +
+  labs(x = "Covid Cases", 
+       y = "Arrival Delay (mins)",
+       title = "Covid Cases vs Arrival Delay")
+```
+
+#Plotting Air Time vs Arrival Delay.
+#Flights with Airtime less than 400 minutes tend to have greater variability.
+#Flights with Airtime more than 400 minutes never delay over 500 minutes.
+
+```{r}
+selected_data %>%
+  ggplot() + 
+  geom_point(aes(AIR_TIME, ARR_DELAY)
+             size = 0.5, alpha = 0.7) +
+  theme_bw() +
+  labs(x = "Air Time (mins)", 
+       y = "Arrival Delay (mins)",
+       title = "Air Time vs Arrival Delay")
+```
+#Zooming in to flights that has less than 400 air time, arrivail delay has a decreasing trend as air time increases.
+#After fitting a SLR model, the R-suqared value is small, it does not show linear relationship between air time and arrival delay.
+
+```{r}
+selected_data %>% 
+  filter(AIR_TIME < 400) %>% 
+  ggplot() + 
+  geom_point(aes(AIR_TIME, ARR_DELAY), 
+             size = 0.5, alpha = 0.7) +
+  theme_bw() + 
+  scale_x_continuous(expand = c(0, 0)) + 
+  scale_y_continuous(expand = c(0, 0))
+  labs(x = "Air Time (mins)", 
+       y = "Arrival Delay (mins)",
+       title = "Air Time (less than 400 mins) vs Arrival Delay")
+  
+airTime_model = lm(AIR_TIME ~ ARR_DELAY, data = selected_data)
+summary(airTime_model)
+```
 
