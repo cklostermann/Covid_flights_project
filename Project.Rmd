@@ -403,4 +403,159 @@ best_states = slim_sample %>%
   tail(10)
 ```
 
+## Caitlyn's Section
+
+Sampling 10% of total data and creating a tsibble to make time series plots
+
+```{r}
+slim_data2 = fulldata3 %>% 
+  select(ARR_DELAY, FL_DATE, DEST_STATE_NM, cases, MKT_UNIQUE_CARRIER)
+names(slim_data2) = tolower(names(slim_data2))
+
+#speed up initial plot development by randomly sampling 10% of the population
+sample_row_index = sample(1:nrow(slim_data2), nrow(slim_data2)/10)
+slim_sample2 = slim_data2[sample_row_index,]
+
+library("tsibble")
+library("tsibbledata")
+library("lubridate")
+library("feasts")
+
+group_cols <- c("fl_date", "dest_state_nm", "mkt_unique_carrier")
+
+#group data by date, destination, and carrier and summarize mean delays and cases
+group_slim_sample2 <- slim_sample2 %>%
+  group_by(across(all_of(group_cols))) %>%
+  summarise(delay_mean_on_given_day = mean(arr_delay),
+            cases_mean_on_given_day = mean(cases))
+group_slim_sample2 <- as.data.frame(group_slim_sample2) #ungroup for sibble
+
+#tsibble indexed by date 
+time_ts <- as_tsibble(group_slim_sample2, key = c("dest_state_nm", "mkt_unique_carrier"))
+
+```
+
+Visualizing time series for mean number of cases per day by destination state and carrier (midwest and western).
+
+Visualizing time series for mean delay time per day by destination state and carrier (midwest and western). 
+
+Thinking about adding column for US region (midwest, western, south, eastern) to dataset so that it is easy to facet visualizations by region or just so there aren't so many messy lines in plots. Implement shiny app for interactive time series plots?
+
+```{r}
+#filter to midwest destination states and dates after March that will have more cases
+midwest <- time_ts %>%
+  filter(dest_state_nm=="Illinois" | dest_state_nm=="Indiana" |
+           dest_state_nm=="Iowa" | dest_state_nm=="Kansas" |
+           dest_state_nm=="Michigan" | dest_state_nm=="Minnesota" |
+           dest_state_nm=="Missouri" | dest_state_nm=="Nebraska" |
+           dest_state_nm=="North Dakota" | dest_state_nm=="Ohio" |
+           dest_state_nm=="South Dakota" | dest_state_nm=="Wisconsin")
+
+western <- time_ts %>%
+  filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
+           dest_state_nm=="California" | dest_state_nm=="Colorado" |
+           dest_state_nm=="Hawaii" | dest_state_nm=="Idaho" |
+           dest_state_nm=="Montana" | dest_state_nm=="Nevada" |
+           dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
+           dest_state_nm=="Utah" | dest_state_nm=="Washington" |
+           dest_state_nm=="Wyoming")
+
+#mean cases per day by midwest destination state (after March 2020)
+ggplot(midwest%>%filter(fl_date>="2020-03-01")) +
+  geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean cases per day", x="")
+
+#mean delay time per day by selected midwest destination state
+ggplot(midwest %>%filter(dest_state_nm=="Wisconsin"|dest_state_nm=="Illinois")) +
+    geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean delay time per day", x="")
+
+#mean cases per day by western destination state
+ggplot(western%>%filter(fl_date>="2020-03-01")) +
+  geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean cases per day", x="")
+
+#mean delay time per day by western destination state (after March 2020)
+ggplot(western) +
+    geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean delay time per day", x="")
+
+```
+
+Above time series for mean delays does not appear to indicate a significant difference before and during the pandemic.
+
+Using K-S test to test whether distribution of mean delay times per day by destination state and carrier are significantly different pre-pandemic (before March 11, 2020) and during the pandemic (after March 11, 2020). Spoiler alert: delay times ARE significantly different (p<<0.05).
+
+```{r}
+pre_pandemic <- time_ts %>%
+  filter(fl_date < "2020-03-11")
+mean(pre_pandemic$delay_mean_on_given_day) #mean delay time pre-pandemic
+
+pandemic <- time_ts %>%
+  filter(fl_date >= "2020-03-11")
+mean(pandemic$delay_mean_on_given_day) #mean delay time pandemic
+
+#Kolmogorov-Smirnov test for difference in distributions of mean delays per day for pre-pandemic and pandemic flights
+ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
+
+```
+
+Visualizing delays for different airline carriers.
+
+```{r}
+ggplot(time_ts) +
+    geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=mkt_unique_carrier)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean delay time per day", x="")
+
+ggplot(time_ts) +
+  geom_boxplot(aes(y=log(delay_mean_on_given_day), x=reorder(mkt_unique_carrier,delay_mean_on_given_day, sd),
+               fill=mkt_unique_carrier)) +
+  theme(legend.position = "none") +
+  labs(y="Mean delay time per day (log scale)", x="Airline carrier")
+
+```
+
+Curious about whether the number of flights per day to each destination state changed after March 11th. SUspect that flights decrease dramatically after March. 
+
+```{r}
+#count number of flights per day for each destination state
+number_flights <- slim_sample2 %>%
+  group_by(dest_state_nm) %>%
+  count(fl_date, sort=TRUE)
+
+most_flights <- number_flights[0:10,] #CA has 9 of the top 10 number of flight days by state
+
+number_flights_ts <- slim_sample2 %>%
+  group_by(dest_state_nm) %>%
+  count(fl_date, sort=TRUE) %>%
+  as.data.frame() %>%
+  as_tsibble(key="dest_state_nm")
+
+#just looking at western states again since California has the most flights
+western_no <- number_flights_ts %>%
+  filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
+           dest_state_nm=="California" | dest_state_nm=="Colorado" |
+           dest_state_nm=="Hawaii" | dest_state_nm=="Idaho" |
+           dest_state_nm=="Montana" | dest_state_nm=="Nevada" |
+           dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
+           dest_state_nm=="Utah" | dest_state_nm=="Washington" |
+           dest_state_nm=="Wyoming")
+
+ggplot(western_no) +
+  geom_line(aes(x = fl_date, y = n, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Number of flights", x="")
+```
+
 
