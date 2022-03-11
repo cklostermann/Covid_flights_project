@@ -612,7 +612,7 @@ casesPlot + delayPlot
 
 ```{r}
 ggplot(selected_data) + 
-  geom_point(aes(cases, ARR_DELAY))
+  geom_point(aes(cases, ARR_DELAY),
              size = 0.5, alpha = 0.7) +
   theme_bw() +
   labs(x = "Covid Cases", 
@@ -627,7 +627,7 @@ ggplot(selected_data) +
 ```{r}
 selected_data %>%
   ggplot() + 
-  geom_point(aes(AIR_TIME, ARR_DELAY)
+  geom_point(aes(AIR_TIME, ARR_DELAY),
              size = 0.5, alpha = 0.7) +
   theme_bw() +
   labs(x = "Air Time (mins)", 
