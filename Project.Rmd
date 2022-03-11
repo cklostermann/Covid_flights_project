@@ -223,7 +223,7 @@ length(which(rowSums(is.na(us_states2)) > 0)) # checking number of rows with NA 
 ```
 
 ### 1.7.3 Joining datasets
-```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 # left join by date and ORIGIN STATE
 fulldata <- left_join(new_flights, us_states2, by = c(c("FL_DATE" = "date"), c("ORIGIN_STATE_NM" = "state")))
 
@@ -401,6 +401,10 @@ best_states = slim_sample %>%
   summarize(mean_delay = mean(arr_delay)) %>% 
   arrange(desc(mean_delay)) %>% 
   tail(10)
+```
+#Haoxuan's work
+```{r}
+
 ```
 
 
