@@ -405,7 +405,7 @@ best_states = slim_sample %>%
 
 ## Caitlyn's Section
 
-Sampling 10% of total data and creating a tsibble to make time series plots
+# Sampling 10% of total data and creating a tsibble to make time series plots
 
 ```{r}
 slim_data2 = fulldata3 %>% 
@@ -427,7 +427,7 @@ group_cols <- c("fl_date", "dest_state_nm", "mkt_unique_carrier")
 group_slim_sample2 <- slim_sample2 %>%
   group_by(across(all_of(group_cols))) %>%
   summarise(delay_mean_on_given_day = mean(arr_delay),
-            cases_mean_on_given_day = mean(cases))
+            cases_mean_on_given_day = mean(cases)) 
 group_slim_sample2 <- as.data.frame(group_slim_sample2) #ungroup for sibble
 
 #tsibble indexed by date 
@@ -435,11 +435,11 @@ time_ts <- as_tsibble(group_slim_sample2, key = c("dest_state_nm", "mkt_unique_c
 
 ```
 
-Visualizing time series for mean number of cases per day by destination state and carrier (midwest and western).
+# Visualizing time series for mean number of cases per day by destination state and carrier (midwest and western).
 
-Visualizing time series for mean delay time per day by destination state and carrier (midwest and western). 
+# Visualizing time series for mean delay time per day by destination state and carrier (midwest and western). 
 
-Thinking about adding column for US region (midwest, western, south, eastern) to dataset so that it is easy to facet visualizations by region or just so there aren't so many messy lines in plots. Implement shiny app for interactive time series plots?
+# Thinking about adding column for US region (midwest, western, south, eastern) to dataset so that it is easy to facet visualizations by region or just so there aren't so many messy lines in plots. Implement shiny app for interactive time series plots?
 
 ```{r}
 #filter to midwest destination states and dates after March that will have more cases
@@ -465,7 +465,8 @@ ggplot(midwest%>%filter(fl_date>="2020-03-01")) +
   geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
   scale_fill_hue(l=100) +
   guides(color = guide_legend(override.aes = list(size = 3))) +
-  labs(y="Mean cases per day", x="")
+  labs(y="Mean cases per day", x="") +
+  theme(legend.position = "right")
 
 #mean delay time per day by selected midwest destination state
 ggplot(midwest %>%filter(dest_state_nm=="Wisconsin"|dest_state_nm=="Illinois")) +
@@ -479,36 +480,42 @@ ggplot(western%>%filter(fl_date>="2020-03-01")) +
   geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
   scale_fill_hue(l=100) +
   guides(color = guide_legend(override.aes = list(size = 3))) +
-  labs(y="Mean cases per day", x="")
+  labs(y="Mean cases per day", x="") +
+  theme(legend.position = "right")
 
 #mean delay time per day by western destination state (after March 2020)
 ggplot(western) +
     geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=dest_state_nm)) +
   scale_fill_hue(l=100) +
   guides(color = guide_legend(override.aes = list(size = 3))) +
-  labs(y="Mean delay time per day", x="")
-
+  labs(y="Mean delay time per day", x="") +
+  scale_x_date(expand=c(0,0)) +
+  ylim(-50,250) +
+  theme(legend.position = "right")
 ```
 
-Above time series for mean delays does not appear to indicate a significant difference before and during the pandemic.
+# Above time series for mean delays does not appear to indicate a significant difference before and during the pandemic.
 
-Using K-S test to test whether distribution of mean delay times per day by destination state and carrier are significantly different pre-pandemic (before March 11, 2020) and during the pandemic (after March 11, 2020). Spoiler alert: delay times ARE significantly different (p<<0.05).
+# Using K-S test to test whether distribution of mean delay times per day by destination state and carrier are significantly different pre-pandemic (before March 11, 2020) and during the pandemic (after March 11, 2020). Spoiler alert: delay times ARE significantly different (p<<0.05).
 
 ```{r}
 pre_pandemic <- time_ts %>%
   filter(fl_date < "2020-03-11")
-mean(pre_pandemic$delay_mean_on_given_day) #mean delay time pre-pandemic
 
 pandemic <- time_ts %>%
   filter(fl_date >= "2020-03-11")
+
+mean(pre_pandemic$delay_mean_on_given_day) #mean delay time pre-pandemic
+sd(pre_pandemic$delay_mean_on_given_day)
 mean(pandemic$delay_mean_on_given_day) #mean delay time pandemic
+sd(pandemic$delay_mean_on_given_day)
 
 #Kolmogorov-Smirnov test for difference in distributions of mean delays per day for pre-pandemic and pandemic flights
 ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
 
 ```
 
-Visualizing delays for different airline carriers.
+# Visualizing delays for different airline carriers.
 
 ```{r}
 ggplot(time_ts) +
@@ -525,7 +532,7 @@ ggplot(time_ts) +
 
 ```
 
-Curious about whether the number of flights per day to each destination state changed after March 11th. SUspect that flights decrease dramatically after March. 
+# Curious about whether the number of flights per day to each destination state changed after March 11th. SUspect that flights decrease dramatically after March. 
 
 ```{r}
 #count number of flights per day for each destination state
@@ -555,10 +562,11 @@ ggplot(western_no) +
   geom_line(aes(x = fl_date, y = n, col=dest_state_nm)) +
   scale_fill_hue(l=100) +
   guides(color = guide_legend(override.aes = list(size = 3))) +
+  theme(legend.position = "right") +
   labs(y="Number of flights", x="")
 ```
 
-Weighting delays by number of flights per day by state:
+# Weighting delays by number of flights per day by state:
 
 ```{r}
 avg_delay_w_count <- slim_sample2 %>%
@@ -590,9 +598,10 @@ ggplot(western_wt_no) +
     geom_line(aes(x = fl_date, y = wt_delay, col=dest_state_nm)) +
   scale_fill_hue(l=100) +
   guides(color = guide_legend(override.aes = list(size = 3))) +
-  labs(y="Mean delay time per day", x="")
+  labs(y="Mean delay time per day", x="") +
+  scale_x_date(expand=c(0,0)) +
+  theme(legend.position = "right")
 ```
-
 
 
 #Haoxuan's Section
