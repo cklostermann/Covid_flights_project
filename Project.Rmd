@@ -558,6 +558,42 @@ ggplot(western_no) +
   labs(y="Number of flights", x="")
 ```
 
+Weighting delays by number of flights per day by state:
+
+```{r}
+avg_delay_w_count <- slim_sample2 %>%
+  group_by(dest_state_nm) %>%
+  add_count(fl_date, sort=TRUE) %>%
+  group_by(fl_date, dest_state_nm) %>%
+  summarise(mean_delay=mean(arr_delay), n=mean(n)) %>%
+  as.data.frame() %>%
+  as_tsibble(key="dest_state_nm")
+
+wt_delay_by_no <- avg_delay_w_count %>%
+  as.data.frame() %>%
+  group_by(fl_date) %>%
+  summarise(wt_delay=mean_delay/n, dest_state_nm=dest_state_nm) %>%
+  as.data.frame() %>%
+  as_tsibble(key="dest_state_nm")
+
+#just looking at western states again since California has the most flights
+western_wt_no <- wt_delay_by_no %>%
+  filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
+           dest_state_nm=="California" | dest_state_nm=="Colorado" |
+           dest_state_nm=="Hawaii" | dest_state_nm=="Idaho" |
+           dest_state_nm=="Montana" | dest_state_nm=="Nevada" |
+           dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
+           dest_state_nm=="Utah" | dest_state_nm=="Washington" |
+           dest_state_nm=="Wyoming")
+
+ggplot(western_wt_no) +
+    geom_line(aes(x = fl_date, y = wt_delay, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean delay time per day", x="")
+```
+
+
 
 #Haoxuan's Section
 ```{r}
