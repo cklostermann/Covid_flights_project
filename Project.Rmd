@@ -64,9 +64,10 @@ output: pdf_document
 # 4:cases (Number of Cases)
 # 5:deaths (Number of Deaths)
 
-```
 
 # Part 1 - Data Processing
+## 1.1 Importing Data 
+Importing Flights and COVID data sets.
 ```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
 library(dplyr)
 library(tidyr)
@@ -74,72 +75,74 @@ library(ggplot2)
 library(ggpubr)
 library(ggridges)
 library(agricolae)
-
 flights <- read.csv("./jantojun2020.csv")
 us_states <- read.csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
 ```
 
 ## 1.2 Filtering Data
-```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
+Removing irrelevant variables and correcting variable data types. This will streamline the data for future operations.
+```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE, results = 'hide'}
 desired_cols <- c(2,3,4,5,6,7,10,13,14,17,18,20,25,28,29,31,36,40,41) # desired columns
 names(flights[,desired_cols]) # columns kept
 flights2 <- flights[,desired_cols] # dataframe with correct columns
-```
 
-## 1.3 Correcting Data Types
-```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
 clean_flights0 <- flights2 %>% # correcting column data types
   mutate(DISTANCE = as.double(DISTANCE)) %>% 
   mutate(CANCELLED = as.logical(CANCELLED)) %>%
   mutate(FL_DATE = as.Date(FL_DATE,format = "%m/%d/%y"))
+
+us_states2 <- us_states [,-3] %>% # removing "fips" column and dates after flights dataset
+  mutate(date = as.Date(date)) %>%
+  subset(date <= max(clean_flights0$FL_DATE)) # dropping data after the latest flight date
+length(which(rowSums(is.na(us_states2)) > 0)) # checking number of rows with NA values in data set
 ```
 
-## 1.4 Incomplete Data
-```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
+## 1.3 Incomplete Data
+It was noticed that when flights were cancelled, many of the other corresponding variables (e.g., arrival delay) were "NA". This is acceptable as the flight never took off and, therefore, cannot be described with some of the other variables. However, some flights incorrectly had missing data, and those were removed (~0.2% of the data).
+```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE, results = 'hide'}
 # CANCELLED column leaves NA in other columns
 clean_flights0_length <- nrow(clean_flights0) # number of rows in dataset
-
 # number of not cancelled flights with missing data
-num_na_rows <- length(which(rowSums(is.na(clean_flights0)) > 0 & clean_flights0$CANCELLED == 0)) 
-share_na <- num_na_rows / clean_flights0_length # share of rows with NA values
-
-num_filled_rows <- clean_flights0_length - num_na_rows # number of fully filled rows
-
-share_na # share of rows with missing information
-num_filled_rows # number of rows with full information
-
-bad_rows <- which(rowSums(is.na(clean_flights0)) > 0 & clean_flights0$CANCELLED == 0) # rows  with missing information
-clean_flights1 <- clean_flights0[-bad_rows,] # eliminating incomplete rows and correcting data types
+num_na_rows <- length(which(rowSums(is.na(clean_flights0)) > 0 & 
+                              clean_flights0$CANCELLED == 0)) 
+# share of rows with NA values
+share_na <- num_na_rows / clean_flights0_length
+# number of fully filled rows
+num_filled_rows <- clean_flights0_length - num_na_rows 
+# share of rows with missing information
+share_na
+# number of rows with full information
+num_filled_rows
+# rows  with missing information
+bad_rows <- which(rowSums(is.na(clean_flights0)) > 0 & 
+                    clean_flights0$CANCELLED == 0)
+# eliminating incomplete rows
+clean_flights1 <- clean_flights0[-bad_rows,]
 ```
 
-## 1.5 Continuous vs. Discrete Data
+## 1.4 Continuous vs. Discrete Data (Flights Dataset)
+For prelimary analysis of the data, variables are split into discrete and continuous categories.
 ```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
 c_clean <- clean_flights1 %>% # non-numeric dates
             select_if(is.double)
-
 # only continuous columns w/ NA values
 c_clean0 <- clean_flights0 %>% 
             select_if(is.double) %>%
             mutate(FL_DATE = as.numeric(clean_flights0$FL_DATE)) 
-
 # only continuous columns w/o NA values
 c_clean1 <- clean_flights1 %>% 
             select_if(is.double) %>%
             mutate(FL_DATE = as.numeric(clean_flights1$FL_DATE)) 
-
 # only discrete columns w/o NA values
 d_clean1 <- clean_flights1 %>% select_if(Negate(is.double))
-
 # only continuous columns w/ NA values (randomly sampled)
 sampled_rows <- sample(1:nrow(d_clean1), nrow(d_clean1), replace = FALSE)
 d_clean0 <- clean_flights0[sampled_rows,]
 ```
 
-## 1.6 Goodness of Fit Testing
-
-### 1.6.1 Calculations
+## 1.5 Goodness of Fit (Flights Dataset)
+To verify whether the previous corrections to the data are appropriate, goodness of fit tests are run to check if the distributions of the new variables match those of the original data set. A Kolmogorov-Smirnov test was run on the continuous variables and a Pearson's Chi-Squared test was run on the discrete variables. Note: because the Chi-Squared test requires the two samples to be equal, the original data is represented with a random sample, of the original data, of the same length as the refined dataset. Furthermore, this was only performed on the Flights data set as the COVID data set contains all of the data points within our timeframe.
 ```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
-#OPTIONAL
 c_pvals <- c() # creating empty vector for p-values
 for(i in 1:(ncol(c_clean1))) { # running Kolmogorov-Smirnov Test (continuous GOF test) between all columns
   ks_result <- ks.test(c_clean0[,i], c_clean1[,i]) # running K-S Test
@@ -149,9 +152,8 @@ c_pval_table <- matrix(c_pvals, ncol = length(c_pvals), byrow = FALSE) # creatin
 colnames(c_pval_table) <- colnames(c_clean1) # matching columns with appropriate column names
 c_pval_table # p-value table
 
-#OPTIONAL
 d_pvals <- c() # creating empty vector for p-values
-for(i in 1:(ncol(d_clean1))) { # running Kolmogorov-Smirnov Test (continuous GOF test) between all columns
+for(i in 1:(ncol(d_clean1))) { # running Chi-Squared Test (discrete GOF test) between all columns
   chisq_result <- chisq.test(d_clean0[,i], d_clean1[,i]) # running Pearson's Chi-Squared Test
   d_pvals <- append(d_pvals, chisq_result$p.value) # appending p-value to p-value vector
 }
@@ -160,119 +162,68 @@ colnames(d_pval_table) <- colnames(d_clean1) # matching columns with appropriate
 d_pval_table # p-value table
 ```
 
-### 1.6.2 Visualization 
-```{r echo=FALSE, message=FALSE, warning=FALSE, include=TRUE}
-#OPTIONAL
-for (i in 1:(ncol(c_clean1))) { # histograms of all continuous columns: raw vs. processed
-  print(ggplot() + 
-          geom_density(aes(c_clean0[,i]), 
-                       color = "black", 
-                       fill = "black", 
-                       alpha = 0.8) + 
-          geom_density(aes(c_clean1[,i]), 
-                       color = "blue", 
-                       fill = "blue", 
-                       alpha = 0.3) + 
-          labs(title = colnames(c_clean1)[i], 
-               x = "value", 
-               y = "density") +
-          theme(strip.text.x = element_text(size = 4), 
-                axis.text.x = element_blank(), 
-                axis.ticks.x=element_blank()) +
-          annotate("text", -Inf, Inf, label = "Processed", hjust = 0, vjust = 1, color = "blue") + 
-          annotate("text", -Inf, Inf, label = "Raw", hjust = 0, vjust = 3, color = "black"))
-}
+## 1.6 Unifying Data
 
-#OPTIONAL
-for (i in 1:(ncol(d_clean1))) { # barplots of all discrete columns: raw vs. processed
-  print(ggplot() + 
-          geom_bar(aes(d_clean0[,i]), 
-                   color = "black", 
-                   fill = "black", 
-                   alpha = 0.8) + 
-          geom_bar(aes(d_clean1[,i]), 
-                   color = "blue", 
-                   fill = "blue", 
-                   alpha = 0.3) + 
-          labs(title = colnames(d_clean1)[i], 
-               x = "value", 
-               y = "density") +
-          theme(strip.text.x = element_text(size = 4), 
-                axis.text.x = element_blank(), 
-                axis.ticks.x=element_blank()) +
-          annotate("text", -Inf, Inf, label = "Processed", hjust = 0, vjust = 1, color = "blue") + 
-          annotate("text", -Inf, Inf, label = "Raw", hjust = 0, vjust = 3, color = "black"))
-}
-```
-
-## 1.7 Unifying Data
-
-### 1.7.1 Binding discrete and continuous data
+### 1.6.1 Binding discrete and continuous data
+Binding the discrete and continuous data, with the discrete data on the left and the continuous data on the right.
 ```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
 # PROCESSED DATA FRAME WITH DISCRETE ON LEFT AND CONTINUOUS ON RIGHT
 new_flights <- cbind(d_clean1, c_clean)
 ```
 
-### 1.7.2 Correcting additional dataset
-```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
-us_states2 <- us_states [,-3] %>% # removing "fips" column and dates after flights dataset
-  mutate(date = as.Date(date)) %>%
-  subset(date <= max(new_flights$FL_DATE))
-
-length(which(rowSums(is.na(us_states2)) > 0)) # checking number of rows with NA values in data set
-```
-
-### 1.7.3 Joining datasets
-```{r echo=FALSE, message=FALSE, warning=FALSE, include=TRUE}
+### 1.6.2 Joining datasets
+Joining the processed Flights and processed COVID data sets, according to date and state of origin.
+```{r echo = FALSE, message = FALSE, warning = FALSE, include = TRUE}
 # left join by date and ORIGIN STATE
 fulldata <- left_join(new_flights, us_states2, by = c(c("FL_DATE" = "date"), c("ORIGIN_STATE_NM" = "state")))
-
 # removing rows that have cases or deaths as "NA"
 num_na_rows <- length(which(is.na(fulldata$cases) == TRUE | is.na(fulldata$deaths) == TRUE)) 
 bad_rows <- which(is.na(fulldata$cases) == TRUE | is.na(fulldata$deaths) == TRUE)
 fulldata2 <- fulldata[-bad_rows,]
-
 # converting NA values to 0
 fulldata3 <- fulldata
 fulldata3[is.na(fulldata)] <- 0
-
-#REMOVE LEADING HASH IN ONE OF THE LINES BELOW AND RUN, TO CONTRAST DIFFERENT PROCESSED DATAFRAMES
-#fulldata # NA values are retained
-#fulldata2 # NA values are omitted
-#fulldata3 # NA values are converted to 0
+fulldata3 <- fulldata3 %>%
+  mutate(cases = as.integer(cases)) %>% # making discrete column integer
+  mutate(deaths = as.integer(deaths)) # making discrete column integer
+head(fulldata3) # NA values are converted to 0
 ```
 
-## 1.7 Visualization (incomplete)
-```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
-#OPTIONAL
-#for (i in 1:(ncol(c_clean1))) { # barplots of all continuous columns: processed
+## 1.7 Visualization (Small Multiples)
+Here is are small multiples of the data. Bar plots were used for the discrete data and density plots were used for the continuous data.
+```{r, include = FALSE, echo = FALSE, message = FALSE, warning = FALSE, results = 'hide'}
+#1.7.1 Distribution of individual variables: by variable [not included]
+#for (i in 1:13) { # barplots of all discrete columns: processed
 #  print(ggplot() + 
-#          geom_density(aes(c_clean1[,i]), color = "blue", fill = "blue", alpha = 0.8) +
-#          labs(title = colnames(c_clean1)[i], x = "value", y = "density")) 
+#          coord_flip() +
+#          geom_density(aes(fulldata3[,i]), color = "blue", fill = "blue", alpha = 0.8) +
+#          labs(title = colnames(fulldata3)[i], x = "density", y = "value")) 
 #}
-
-#OPTIONAL
-#for (i in 1:(ncol(d_clean1))) { # barplots of all discrete columns: processed
+#
+#for (i in 14:21) { # barplots of all continuous columns: processed
 #  print(ggplot() + 
-#          geom_bar(aes(d_clean1[,i]), color = "blue", fill = "blue", alpha = 0.8) +
-#          labs(title = colnames(d_clean1)[i], x = "value", y = "density")) 
+#          scale_x_continuous(labels = scales::comma) +
+#          scale_y_log10(labels = scales::comma) +
+#          geom_bar(aes(fulldata3[,i]), color = "blue", fill = "blue", alpha = 0.8) +
+#          labs(title = colnames(fulldata3)[i], x = "value", y = "density")) 
 #}
 ```
 
 ```{r, include = TRUE, echo = FALSE, message = FALSE, warning = FALSE}
-ggplot(gather(c_clean1), aes(value)) + # processed continuous data density plots (small multiples)
-  geom_density(color = "blue", fill = "blue", alpha = 0.8) + 
+ggplot(gather(fulldata3[1:13]), aes(value)) + # processed discrete data density plots (small multiples)
+  geom_bar(color = "blue", fill = "blue", alpha = 0.8) + 
   facet_wrap(~ key, scales = "free") +
   theme(strip.text.x = element_text(size = 5), 
         axis.text.x = element_blank(), 
         axis.ticks.x = element_blank()) 
 
-ggplot(gather(d_clean1), aes(value)) + # processed discrete data density plots (small multiples)
-  geom_bar(color = "blue", fill = "blue", alpha = 0.8) + 
+ggplot(gather(fulldata3[14:21]), aes(value)) + # processed continuous data density plots (small multiples)
+  geom_density(color = "blue", fill = "blue", alpha = 0.8) + 
+  coord_flip() +
   facet_wrap(~ key, scales = "free") +
   theme(strip.text.x = element_text(size = 5), 
         axis.text.x = element_blank(), 
-        axis.ticks.x=element_blank())
+        axis.ticks.x = element_blank())
 ```
 
 ## Jonah's Section (Temporary Title)
