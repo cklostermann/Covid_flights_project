@@ -226,7 +226,7 @@ ggplot(gather(fulldata3[14:21]), aes(value)) + # processed continuous data densi
         axis.ticks.x = element_blank())
 ```
 
-## Jonah's Section (Temporary Title)
+# Part 2 - Visualization
 Create smaller data frame to focus on the relationship between arrival delay with distance, origin, and (covid) deaths. 
 ```{r}
 slim_data = fulldata3 %>% 
@@ -239,7 +239,7 @@ sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
 slim_sample = slim_data[sample_row_index,]
 ```
 
-### Arrival Delay and Distance
+## Arrival Delay and Distance
 The correlation between these variables is low, so I dont expect to find that distance will be helpful in predicting arrival delay
 ```{r}
 no_delay = sum(slim_sample$arr_delay <= 0) / length(slim_sample$arr_delay) 
@@ -354,9 +354,7 @@ best_states = slim_sample %>%
   tail(10)
 ```
 
-## Caitlyn's Section
-
-# Sampling 10% of total data and creating a tsibble to make time series plots
+## Sampling 10% of total data and creating a tsibble to make time series plots
 
 ```{r}
 slim_data2 = fulldata3 %>% 
@@ -386,11 +384,11 @@ time_ts <- as_tsibble(group_slim_sample2, key = c("dest_state_nm", "mkt_unique_c
 
 ```
 
-# Visualizing time series for mean number of cases per day by destination state and carrier (midwest and western).
+## Visualizing time series for mean number of cases per day by destination state and carrier (midwest and western).
 
-# Visualizing time series for mean delay time per day by destination state and carrier (midwest and western). 
+## Visualizing time series for mean delay time per day by destination state and carrier (midwest and western). 
 
-# Thinking about adding column for US region (midwest, western, south, eastern) to dataset so that it is easy to facet visualizations by region or just so there aren't so many messy lines in plots. Implement shiny app for interactive time series plots?
+Thinking about adding column for US region (midwest, western, south, eastern) to dataset so that it is easy to facet visualizations by region or just so there aren't so many messy lines in plots. Implement shiny app for interactive time series plots?
 
 ```{r}
 #filter to midwest destination states and dates after March that will have more cases
@@ -445,9 +443,9 @@ ggplot(western) +
   theme(legend.position = "right")
 ```
 
-# Above time series for mean delays does not appear to indicate a significant difference before and during the pandemic.
+Above time series for mean delays does not appear to indicate a significant difference before and during the pandemic.
 
-# Using K-S test to test whether distribution of mean delay times per day by destination state and carrier are significantly different pre-pandemic (before March 11, 2020) and during the pandemic (after March 11, 2020). Spoiler alert: delay times ARE significantly different (p<<0.05).
+Using K-S test to test whether distribution of mean delay times per day by destination state and carrier are significantly different pre-pandemic (before March 11, 2020) and during the pandemic (after March 11, 2020). Spoiler alert: delay times ARE significantly different (p<<0.05).
 
 ```{r}
 pre_pandemic <- time_ts %>%
@@ -466,7 +464,7 @@ ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
 
 ```
 
-# Visualizing delays for different airline carriers.
+## Visualizing delays for different airline carriers.
 
 ```{r}
 ggplot(time_ts) +
@@ -483,7 +481,7 @@ ggplot(time_ts) +
 
 ```
 
-# Curious about whether the number of flights per day to each destination state changed after March 11th. SUspect that flights decrease dramatically after March. 
+Curious about whether the number of flights per day to each destination state changed after March 11th. SUspect that flights decrease dramatically after March. 
 
 ```{r}
 #count number of flights per day for each destination state
@@ -517,7 +515,7 @@ ggplot(western_no) +
   labs(y="Number of flights", x="")
 ```
 
-# Weighting delays by number of flights per day by state:
+## Weighting delays by number of flights per day by state:
 
 ```{r}
 avg_delay_w_count <- slim_sample2 %>%
@@ -535,7 +533,7 @@ wt_delay_by_no <- avg_delay_w_count %>%
   as.data.frame() %>%
   as_tsibble(key="dest_state_nm")
 
-#just looking at western states again since California has the most flights
+just looking at western states again since California has the most flights
 western_wt_no <- wt_delay_by_no %>%
   filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
            dest_state_nm=="California" | dest_state_nm=="Colorado" |
@@ -555,15 +553,14 @@ ggplot(western_wt_no) +
 ```
 
 
-#Haoxuan's Section
 ```{r}
 library(patchwork)
 selected_data = fulldata3 %>% 
   select(ARR_DELAY, ORIGIN_STATE_NM, FL_DATE, AIR_TIME, cases)
 ```
 
-#Plotting Date vs Arrival Delay with faciting.
-#The delay has a decreasing trend over time. It has a higher delay time before April among all states on average.
+## Plotting Date vs Arrival Delay with faciting.
+The delay has a decreasing trend over time. It has a higher delay time before April among all states on average.
 
 ```{r, fig.height = 20, fig.width = 25}
 ggplot(selected_data) + 
@@ -575,8 +572,8 @@ ggplot(selected_data) +
   labs(x = "Date", y = "Arrival Delay (mins)", title = "Delay Changes Over Days")
 ```
 
-#Comparing Mean Cases and Mean Delay
-#Calculate the mean cases and mean delay grouped by the origin state. It does not show that there are any correltation beteewn cases and mean delay.
+## Comparing Mean Cases and Mean Delay
+Calculate the mean cases and mean delay grouped by the origin state. It does not show that there are any correltation beteewn cases and mean delay.
 
 ```{r, fig.height = 20, fig.width = 25}
 mean_cases = selected_data %>% 
@@ -603,8 +600,8 @@ delayPlot = ggplot(mean_delay) +
 casesPlot + delayPlot
 ```
 
-#Plotting Cases vs Arrival Delay
-# no clear pattern shown in the scatter plot, there are too many data points with no cases, and no clear pattern shown
+## Plotting Cases vs Arrival Delay
+No clear pattern shown in the scatter plot, there are too many data points with no cases, and no clear pattern shown
 
 ```{r}
 ggplot(selected_data) + 
@@ -616,9 +613,9 @@ ggplot(selected_data) +
        title = "Covid Cases vs Arrival Delay")
 ```
 
-#Plotting Air Time vs Arrival Delay.
-#Flights with Airtime less than 400 minutes tend to have greater variability.
-#Flights with Airtime more than 400 minutes never delay over 500 minutes.
+## Plotting Air Time vs Arrival Delay.
+Flights with Airtime less than 400 minutes tend to have greater variability.
+Flights with Airtime more than 400 minutes never delay over 500 minutes.
 
 ```{r}
 selected_data %>%
@@ -630,8 +627,8 @@ selected_data %>%
        y = "Arrival Delay (mins)",
        title = "Air Time vs Arrival Delay")
 ```
-#Zooming in to flights that has less than 400 air time, arrivail delay has a decreasing trend as air time increases.
-#After fitting a SLR model, the R-suqared value is small, it does not show linear relationship between air time and arrival delay.
+Zooming in to flights that has less than 400 air time, arrivail delay has a decreasing trend as air time increases.
+After fitting a SLR model, the R-suqared value is small, it does not show linear relationship between air time and arrival delay.
 
 ```{r}
 selected_data %>% 
@@ -650,7 +647,7 @@ airTime_model = lm(AIR_TIME ~ ARR_DELAY, data = selected_data)
 summary(airTime_model)
 ```
 
-## Kelsey's Section
+## Arrival Delay, Flight Data, Destination, and Origin
 ```{r}
 slim_data3 = fulldata3 %>% 
   select(ARR_DELAY, FL_DATE, cases, DEST_STATE_NM, ORIGIN_STATE_NM)
@@ -666,7 +663,7 @@ library("feasts")
 
 ```
 
-## We will plot arrival delay versus origin state of the flight. We can see that there are trends with some origin states and arrival delays.  For example, Hawaii, Alaska, and all territories have a greater arrival delay than average.
+We will plot arrival delay versus origin state of the flight. We can see that there are trends with some origin states and arrival delays.  For example, Hawaii, Alaska, and all territories have a greater arrival delay than average.
 ```{r}
 ggplot(slim_data3, aes(arr_delay, origin_state_nm))+
   geom_boxplot()+
@@ -676,7 +673,7 @@ ggplot(slim_data3, aes(arr_delay, origin_state_nm))+
 ```
 
 
-## We will plot arrival delay versus destination state of the flight.  As we can see, destination state and arrival delay have trends.  For example, Alaska and all of the territories have a greater than average arrival delay.
+We will plot arrival delay versus destination state of the flight.  As we can see, destination state and arrival delay have trends.  For example, Alaska and all of the territories have a greater than average arrival delay.
 ```{r}
 ggplot(slim_data3, aes(arr_delay, dest_state_nm))+
   geom_boxplot()+
@@ -684,14 +681,14 @@ ggplot(slim_data3, aes(arr_delay, dest_state_nm))+
   labs(x="Arrival Delay", y="Destination State")+
   scale_x_sqrt()
 ```
-## We will plot cases versus destination states.  This plot shows the range of cases throughout the days.  Some states have a large range, extending from zero to the max, but some have a short range.  This would be interesting to compare with delays per state.
+We will plot cases versus destination states.  This plot shows the range of cases throughout the days.  Some states have a large range, extending from zero to the max, but some have a short range.  This would be interesting to compare with delays per state.
 ```{r}
 ggplot(slim_data3, aes(cases, dest_state_nm))+
   geom_point()+
   theme(axis.text = element_text(size = 5))+
   labs(x="Cases", y="Destination State Name")
 ```
-## We will plot cases versus origin states.  We can see that New York is by far the forerunner for number of cases.
+We will plot cases versus origin states.  We can see that New York is by far the forerunner for number of cases.
 ```{r}
 ggplot(slim_data3, aes(cases, origin_state_nm))+
   geom_point()+
@@ -699,7 +696,7 @@ ggplot(slim_data3, aes(cases, origin_state_nm))+
   labs(x="Cases", y="Origin State Name")
 ```
 
-## We will plot flight date versus cases for comparison of above analyzation.  We can see that in April there is a large spike in cases, suggesting that the max cases in the above graphs came from these months including and following April.
+We will plot flight date versus cases for comparison of above analyzation.  We can see that in April there is a large spike in cases, suggesting that the max cases in the above graphs came from these months including and following April.
 ```{r}
 ggplot(slim_data3, aes(fl_date, cases))+
   geom_point()+
