@@ -337,7 +337,7 @@ ggplot(shortest_origin_delays) +
 Fit a one way anova model to see if origin affects arrival delay. Value is essentially zero, meaning that at least one origin has an arrival delay mean that is different from the rest. Unsurprising that the null was rejected. Will explore this further in the refinement stage.
 ```{r}
 model = aov(arr_delay ~ origin, data = slim_sample)
-results = anova(model)
+results = anova(model) 
 ```
 Same tables as above only for states instead of specific airports
 ```{r}

@@ -13,10 +13,14 @@ library(tidyverse)
 library(patchwork)
 ```
 
+## Introduction and Overview of Data
+```{r}
 
-```{r data processing, include = FALSE, cache = TRUE}
-#This will not be visible in the rendered version of the report
+```
 
+
+## Data Processing 
+```{r data processing, cache = TRUE}
 flights <- read.csv("./jantojun2020.csv")
 us_states <- read.csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
 
@@ -86,13 +90,10 @@ fulldata3 <- fulldata3 %>%
 head(fulldata3) # NA values are converted to 0
 ```
 
-## Introduction and Overview of Data
-```{r}
-
-```
 
 ## Analysis of Key Variables
 ```{r random sample, include = FALSE}
+#variables jonah works on
 slim_data = fulldata3 %>% 
   select(ARR_DELAY, DISTANCE, ORIGIN, ORIGIN_STATE_NM, deaths)
 
@@ -104,14 +105,14 @@ sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
 fulldata3_copy = fulldata3 #so i can change the col names to lowercase to work with code I have written without messing up others code
 names(fulldata3_copy) = tolower(names(fulldata3_copy))
 
-#slim_sample is now the full data
+#slim_sample is now the full data so plots represent all data
 slim_sample = fulldata3_copy #slim_data[sample_row_index,]  
 ```
 
 ### Arrival Delay and Distance
 One might think that longer flights are expected to have longer delays. This turns out not to be true. Arrival delays and flight distance are very weakly correlated, with a spearman correlation coefficient (able to detect non-linear trends) of only -0.022. A scatterplot between these two variables suggests that these variables are relatively unrelated as well. 
 
-```{r arrival delay and distance, echo = FALSE, cache = TRUE}
+```{r arrival delay and distance, cache = TRUE}
 no_delay = sum(slim_sample$arr_delay <= 0) / length(slim_sample$arr_delay) 
 correlation = cor(slim_sample$arr_delay, slim_sample$distance, method = "spearman")
 
@@ -125,7 +126,7 @@ ggplot(slim_sample, aes(distance, arr_delay)) +
 
 Alternatively, we can examine boxplots of flight distance grouped by every 1000 miles, and see that the distribution of arrival delays is nearly identical in all cases. Outliers have been removed because they obscure most of the distributions since there are some very high outliers. Note that the third quartile is near zero for every boxplot, meaning that 75% of the flights actually arrive on time or early. 
 
-```{r arrival delay and distance 2, echo = FALSE, cache = TRUE}
+```{r arrival delay and distance 2, cache = TRUE}
 #calculate quantiles to filter out outliers 
 iqr =  quantile(slim_sample$arr_delay, 0.75) - quantile(slim_sample$arr_delay, 0.25)
 upper_outlier_q = quantile(slim_sample$arr_delay, 0.75) + 1.5 * iqr
@@ -145,7 +146,7 @@ ggplot(aes(distance, arr_delay)) +
 ### Arrival Delay and Covid Deaths
 Arrival delays were compared with covid deaths on that particular day, serving as a proxy for the severity of covid. Even though these data are from near the peak of covid, only 42% of the dates in this range have any covid deaths at all. The Spearman correlation coefficient for arrival delays and deaths is -0.05. A graphical approach with the scatterplot also suggests a weak association.
 
-```{r arrival delay and deaths, echo = FALSE, cache = TRUE}
+```{r arrival delay and deaths, cache = TRUE}
 death_correlation = cor(slim_sample$arr_delay, slim_sample$deaths, method = "spearman")
 
 zero_death_days = sum(slim_sample$deaths == 0) / length(slim_sample$deaths)
@@ -155,13 +156,20 @@ ggplot(slim_sample, aes(deaths, arr_delay)) +
   labs(x = "Covid Related Deaths",
        y = "Arrival Delay",
        title = "Covid Deaths vs Arrival Delay")
-
-lm = lm(arr_delay ~ deaths, data = slim_sample)
 ```
 
 ### Arrival Delay and Origin
-One variable that seems to significantly influence arrival delays is the airport the flight originated from. A one way ANOVA test of delay modeled by origin reveals that there are statistically significant differences in arrival delays among airports. The rejection of the null hypothesis is unsurprising as there are 375 airports in the data set. The best and the worst airports to fly from are shown below.
-```{r arrival delay and origin, echo = FALSE, cache = TRUE}
+One variable that seems to significantly influence arrival delays is the airport the flight originated from. A one way ANOVA test of delay modeled by origin reveals that there are statistically significant differences in arrival delays among airports (p-value = $1*10^{-163}$. The rejection of the null hypothesis is unsurprising as there are 375 airports in the data set. The best and the worst airports to fly from are shown below.
+
+```{r anova origin, cache = TRUE}
+#The full data set is too large to run ANOVA on, but running it on a randomly sampled subset reveals that the null is rejected with a pvalue of essentially 0
+sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
+slim_sample = slim_data[sample_row_index,] 
+model = aov(arr_delay ~ origin, data = slim_sample)
+results = anova(model)
+```
+
+```{r arrival delay and origin, cache = TRUE}
 longest_origin_delays = slim_sample %>% 
   group_by(origin) %>% 
   summarize(mean_delay = mean(arr_delay)) %>% 
@@ -188,3 +196,4 @@ labs(x = "Origin",
  
 p1 + p2
 ```
+
