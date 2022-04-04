@@ -334,7 +334,7 @@ ggplot(aes(distance, arr_delay)) +
 ```
 In summary, I see explanatory relationship between distance and arrival delay
 
-## Arrival Delay and Deaths
+### Arrival Delay and Deaths
 Weak correlation between deaths and arrival delay. 58% of days have no covid deaths. Scatterplot shows no hints of a relationship either
 ```{r}
 cor(slim_sample$arr_delay, slim_sample$deaths)
@@ -352,7 +352,7 @@ Fitting a linear model of arrival delay modeled by deaths shows that the coeffic
 lm = lm(arr_delay ~ deaths, data = slim_sample)
 ```
 
-## Arrival Delay and Origin
+### Arrival Delay and Origin
 Group by origin and find average delay for each. Then take the 10 that are the shortest delays on average, and the 10 that are the longest delays on average. Note there are 373 unique origins. 
 ```{r}
 longest_origin_delays = slim_sample %>% 
