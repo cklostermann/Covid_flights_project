@@ -64,7 +64,7 @@ output: pdf_document
 # 4:cases (Number of Cases)
 # 5:deaths (Number of Deaths)
 
-
+```
 # Part 1 - Data Processing
 ## 1.1 Importing Data 
 Importing Flights and COVID data sets.
@@ -243,7 +243,7 @@ slim_sample = slim_data[sample_row_index,]
 The correlation between these variables is low, so I dont expect to find that distance will be helpful in predicting arrival delay
 ```{r}
 no_delay = sum(slim_sample$arr_delay <= 0) / length(slim_sample$arr_delay) 
-correlation = cor(slim_sample$arr_delay, slim_sample$distance)
+correlation = cor(slim_sample$arr_delay, slim_sample$distance, method = "spearman")
 ```
 
 Interesting pattern. It seems that most of the high arrival delays occur when the distance is short (< 1500 miles). Even given this, there does not appear to be a clear pattern that would suggest that these variables are closely related.
@@ -288,7 +288,7 @@ In summary, I see explanatory relationship between distance and arrival delay
 ### Arrival Delay and Deaths
 Weak correlation between deaths and arrival delay. 58% of days have no covid deaths. Scatterplot shows no hints of a relationship either
 ```{r}
-cor(slim_sample$arr_delay, slim_sample$deaths)
+cor(slim_sample$arr_delay, slim_sample$deaths, method = "spearman")
 
 zero_death_days = sum(slim_sample$deaths == 0) / length(slim_sample$deaths)
 
@@ -533,7 +533,7 @@ wt_delay_by_no <- avg_delay_w_count %>%
   as.data.frame() %>%
   as_tsibble(key="dest_state_nm")
 
-just looking at western states again since California has the most flights
+#just looking at western states again since California has the most flights
 western_wt_no <- wt_delay_by_no %>%
   filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
            dest_state_nm=="California" | dest_state_nm=="Colorado" |
