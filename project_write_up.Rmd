@@ -10,6 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 #put all libraries used in the report here 
 library(tidyverse)
 library(patchwork)
+library(ggplot2)
+library(tsibble)
+library(tsibbledata)
+library(lubridate)
+library(feasts)
 ```
 # Guiding Question
 What factors affected flight delays between January and June 2020? 
@@ -417,7 +422,7 @@ p2 <- ggplot(outlier.omit) +
   scale_fill_brewer(palette="Set3") +
   theme(legend.position = "none",
         axis.title = element_text(size=12)) +
-  labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier (delays > 3 SD from mean removed)")
+  labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier (delays < 3 SD from mean removed)")
 
 summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=outlier.omit))
 
@@ -425,9 +430,13 @@ p1 | p2
 ```
 
 
+<<<<<<< HEAD
 # Discussion of Plots
 
 On the plots evaluating Distance, Death, and Origin:
+=======
+# Discussion of Improvements
+>>>>>>> e2554052f6cb7b17b30a7aa48f93dd46db026644
 
 Overall good visualizations, clearly shows the trend between flight delays, origin airports, flight distance, and deaths. 
 However, color coding the points in graph "Death vs Delays" and "Distance vs Delays" with states might make the visualization richer in information.  
