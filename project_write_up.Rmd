@@ -425,9 +425,10 @@ p1 | p2
 ```
 
 
-# Evaluations
+# Discussion of Plots
 
-Jonah's work: 
+On the plots evaluating Distance, Death, and Origin:
+
 Overall good visualizations, clearly shows the trend between flight delays, origin airports, flight distance, and deaths. 
 However, color coding the points in graph "Death vs Delays" and "Distance vs Delays" with states might make the visualization richer in information.  
 It may be better to customize the opacity and size of the dots so that it is clearer for readers see each points rather than a black area. 
@@ -438,8 +439,9 @@ From initial explorations, we are visualizing each of the variables with arrival
 We divide visualization into sections and have clear logic inside of each section. 
 We could explain the relationship between each of the sections and how it goes from the first graph to the last one.
 
-Caitlyn's Work:
-Caitlyn has good visualizations. There are many meaningful comparisons between variables, such as mean delay vs time, and mean delay vs airline carrier. The graphs give meaningful insight into these comparisons and show what we are trying to prove well.
+On the plots of Mean Delay, Time, and Airline Carrier:
+
+These are good visualizations. There are many meaningful comparisons between variables, such as mean delay vs time, and mean delay vs airline carrier. The graphs give meaningful insight into these comparisons and show what we are trying to prove well.
 
 Some strong points of these graphs are the clean layout and formatting, easy-to-identify color scheme, and use of appropriate plot types. 
 
