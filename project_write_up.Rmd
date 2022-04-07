@@ -10,6 +10,11 @@ knitr::opts_chunk$set(echo = TRUE)
 #put all libraries used in the report here 
 library(tidyverse)
 library(patchwork)
+library(ggplot2)
+library(tsibble)
+library(tsibbledata)
+library(lubridate)
+library(feasts)
 ```
 # Guiding Question
 What factors affected flight delays between January and June 2020? 
