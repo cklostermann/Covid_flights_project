@@ -197,3 +197,10 @@ labs(x = "Origin",
 p1 + p2
 ```
 
+### Evaluations
+
+### Jonah's work: Overall good visualizations, clearly shows the trend between flight delays, origin airports, flight distance, and deaths. However, color coding the points in graph "Death vs Delays" and "Distance vs Delays" with states might make the visualization richer in information.  It may be better to customize the opacity and size of the dots so that it is clearer for readers see each points rather than a black area. Probably removing the gaps between bars/dots and x, y axis makes the visualization look better.
+
+
+
+### One thing we want to improve is the logic behind our visualizations. From initial explorations, we are visualizing each of the variables with arrival delay time to find the trend inside the data. We divide visualization into sections and have clear logic inside of each section. We could explain the relationship between each of the sections and how it goes from the first graph to the last one.
