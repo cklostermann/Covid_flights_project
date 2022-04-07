@@ -425,7 +425,7 @@ p1 | p2
 ```
 
 
-# Evaluations
+# Discussion of Improvements
 
 Jonah's work: 
 Overall good visualizations, clearly shows the trend between flight delays, origin airports, flight distance, and deaths. 
