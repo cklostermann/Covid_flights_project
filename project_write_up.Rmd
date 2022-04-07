@@ -180,6 +180,250 @@ labs(x = "Origin",
 p1 + p2
 ```
 
+## Arrival Delay and Number of Flights During the Onset of the COVID-19 Pandemic
+
+We notice a that there is an initial increase in mean delay times during the first month of the COVID-19 pandemic indicated by an upward spike, and that mean delay times dip slightly after the initial spike during the pandemic with greater variation times in some states.
+
+```{r formatting data for time series, cache=TRUE}
+slim_data2 = fulldata3 %>% 
+  select(ARR_DELAY, FL_DATE, DEST_STATE_NM, cases, MKT_UNIQUE_CARRIER)
+names(slim_data2) = tolower(names(slim_data2)) 
+
+
+group_cols <- c("fl_date", "dest_state_nm")
+#group data by date and destination, and summarize mean delays and cases
+group_state <- slim_data2 %>%
+  group_by(across(all_of(group_cols))) %>%
+  summarise(delay_mean_on_given_day = mean(arr_delay),
+            cases_mean_on_given_day = mean(cases)) 
+group_state <- as.data.frame(group_state) #ungroup for sibble
+#tsibble indexed by date 
+group_state_ts <- as_tsibble(group_state, key = c("dest_state_nm"))
+
+
+#group data by date and carrier, and summarize mean delays and cases
+group_carrier <- slim_data2 %>%
+  group_by(across(all_of(c("fl_date", "mkt_unique_carrier")))) %>%
+  summarise(delay_mean_on_given_day = mean(arr_delay),
+            cases_mean_on_given_day = mean(cases)) 
+group_carrier <- as.data.frame(group_carrier) #ungroup for sibble
+#tsibble indexed by date 
+group_carrier_ts <- as_tsibble(group_carrier, key = c("mkt_unique_carrier"))
+
+
+```
+
+```{r Midwest and Western US time series, cache=TRUE, fig.width=12, fig.height=10}
+#filter to midwest destination states and dates after March that will have more cases
+midwest <- group_state_ts %>%
+  filter(dest_state_nm=="Illinois" | dest_state_nm=="Indiana" |
+           dest_state_nm=="Iowa" | dest_state_nm=="Kansas" |
+           dest_state_nm=="Michigan" | dest_state_nm=="Minnesota" |
+           dest_state_nm=="Missouri" | dest_state_nm=="Nebraska" |
+           dest_state_nm=="North Dakota" | dest_state_nm=="Ohio" |
+           dest_state_nm=="South Dakota" | dest_state_nm=="Wisconsin") 
+
+western <- group_state_ts %>%
+  filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
+           dest_state_nm=="California" | dest_state_nm=="Colorado" |
+           dest_state_nm=="Hawaii" | dest_state_nm=="Idaho" |
+           dest_state_nm=="Montana" | dest_state_nm=="Nevada" |
+           dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
+           dest_state_nm=="Utah" | dest_state_nm=="Washington" |
+           dest_state_nm=="Wyoming")
+
+#mean cases per day by midwest destination state (after March 2020)
+p1 <- ggplot(midwest%>%filter(fl_date>="2020-03-01")) +
+        geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
+        scale_fill_hue(l=100) +
+        guides(color = guide_legend(override.aes = list(size = 3))) +
+        labs(y="Mean cases per day (100,000s)", x="", title = "Midwest States") +
+        scale_y_continuous(label = scales::label_number(scale=1/1e5)) +
+        scale_color_discrete(name = "destination state") +
+        scale_x_date(expand=c(0,0)) +
+        theme(axis.title = element_text(size=10),
+              legend.position = "bottom")
+
+#mean delay time per day by selected midwest destination state
+p2 <- ggplot(midwest) +
+        geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=dest_state_nm)) +
+        scale_fill_hue(l=100) +
+        guides(color = guide_legend(override.aes = list(size = 3))) +
+        labs(y="Mean delay time per day (minutes)", x="") +
+        scale_color_discrete(name = "destination state") +
+        scale_x_date(expand=c(0,0)) +
+        ylim(-20,100) +
+        theme(legend.position = "none",
+              axis.title = element_text(size=10))
+
+#mean cases per day by western destination state
+p3 <- ggplot(western%>%filter(fl_date>="2020-03-01")) +
+        geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
+        scale_fill_hue(l=100) +
+        guides(color = guide_legend(override.aes = list(size = 3))) +
+        labs(y="Mean cases per day (in 100,000s)", x="", title = "Western States") +
+        scale_y_continuous(label = scales::label_number(scale=1/1e5)) +
+        scale_color_discrete(name = "") +
+        scale_x_date(expand=c(0,0)) +
+        theme(axis.title = element_text(size=10),
+              legend.position = "bottom")
+
+#mean delay time per day by western destination state 
+p4 <- ggplot(western) +
+        geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=dest_state_nm)) +
+        scale_fill_hue(l=100) +
+        guides(color = guide_legend(override.aes = list(size = 3))) +
+        labs(y="Mean delay time per day (minutes)", x="") +
+        scale_x_date(expand=c(0,0)) +
+        ylim(-20,100) +
+        theme(legend.position = "none",
+              axis.title = element_text(size=10))
+(p1 / p2) | (p3/p4)
+```
+
+To test whether delays during the pandemic were significantly different than previously, we split the data by date at the point 2020-03-11. A Kolmogorov-Smirnov test to test whether the distributions of delays per day are significantly different pre-pandemic and during the pandemic reveals that delays are in fact different ($p<<0.05$). Mean delay time per day pre-pandemic ($-0.53 \pm 12.80$) was greater than mean delay time per day ($-7.88 \pm 9.61$) during the pandemic. 
+
+```{r k-s test, cache=TRUE}
+pre_pandemic <- group_state_ts %>%
+  filter(fl_date < "2020-03-11")
+
+pandemic <- group_state_ts %>%
+  filter(fl_date >= "2020-03-11")
+
+mean(pre_pandemic$delay_mean_on_given_day) #mean delay time pre-pandemic
+sd(pre_pandemic$delay_mean_on_given_day)
+mean(pandemic$delay_mean_on_given_day) #mean delay time pandemic
+sd(pandemic$delay_mean_on_given_day)
+
+#Kolmogorov-Smirnov test for difference in distributions of mean delays per day for pre-pandemic and pandemic flights
+ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
+
+```
+
+California has the top 10 number of flights per day, and 8 of these dates are just before or just after March 11, 2020.
+
+```{r number of flights time series, cache=TRUE, fig.height=5, fig.width=8}
+#count number of flights per day for each destination state
+number_flights <- slim_data2 %>%
+  group_by(dest_state_nm) %>%
+  count(fl_date, sort=TRUE)
+
+most_flights <- number_flights[0:10,] #CA has 10 of the top 10 number of flight days by state
+
+number_flights_ts <- slim_data2 %>%
+  group_by(dest_state_nm) %>%
+  count(fl_date, sort=TRUE) %>%
+  as.data.frame() %>%
+  as_tsibble(key="dest_state_nm")
+
+#just looking at western states again since California has the most flights
+western_no <- number_flights_ts %>%
+  filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
+           dest_state_nm=="California" | dest_state_nm=="Colorado" |
+           dest_state_nm=="Hawaii" | dest_state_nm=="Idaho" |
+           dest_state_nm=="Montana" | dest_state_nm=="Nevada" |
+           dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
+           dest_state_nm=="Utah" | dest_state_nm=="Washington" |
+           dest_state_nm=="Wyoming")
+
+ggplot(western_no) +
+  geom_line(aes(x = fl_date, y = n, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Number of flights", x="", title="Number of flights in Western States") +
+  scale_x_date(expand=c(0,0)) +
+  scale_color_discrete(name = "destination state") +
+  theme(legend.position = "bottom",
+        axis.title = element_text(size=10))
+
+```
+Weighting mean delay per day by number of flights for each destination state, allowed us to more clearly see the dip in delays after the onset of the pandemic. We eliminated Wyoming from this plot of Western states' weighted delays as this state actually has higher mean delay times during the pandemic. 
+
+```{r delays weighted by number of flights, cache=TRUE, fig.height=12, fig.width=8}
+avg_delay_w_count <- slim_data2 %>%
+  group_by(dest_state_nm) %>%
+  add_count(fl_date, sort=TRUE) %>%
+  group_by(fl_date, dest_state_nm) %>%
+  summarise(mean_delay=mean(arr_delay), n=mean(n)) %>%
+  as.data.frame() %>%
+  as_tsibble(key="dest_state_nm")
+
+wt_delay_by_no <- avg_delay_w_count %>%
+  as.data.frame() %>%
+  group_by(fl_date) %>%
+  summarise(wt_delay=mean_delay/n, dest_state_nm=dest_state_nm) %>%
+  as.data.frame() %>%
+  as_tsibble(key="dest_state_nm")
+
+#just looking at western states again since California has the most flights
+western_wt_no <- wt_delay_by_no %>%
+  filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
+           dest_state_nm=="California" | dest_state_nm=="Colorado" |
+           dest_state_nm=="Hawaii" | dest_state_nm=="Idaho" |
+           dest_state_nm=="Montana" | dest_state_nm=="Nevada" |
+           dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
+           dest_state_nm=="Utah" | dest_state_nm=="Washington") #|
+           #dest_state_nm=="Wyoming")
+
+p1 <- ggplot(western_wt_no) +
+    geom_line(aes(x = fl_date, y = wt_delay, col=dest_state_nm)) +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean delay time per day", x="", title="Mean delay per day (weighted by # of flights) by Western state") +
+  scale_x_date(expand=c(0,0)) +
+  scale_color_discrete(name = "destination state") +
+  theme(legend.position = "bottom",
+        axis.title = element_text(size=12))
+
+p2 <- ggplot(wt_delay_by_no %>% filter(dest_state_nm == "Wyoming")) +
+    geom_line(aes(x = fl_date, y = wt_delay), col="#FF689F") +
+  scale_fill_hue(l=100) +
+  guides(color = guide_legend(override.aes = list(size = 3))) +
+  labs(y="Mean delay time per day", x="", title="Mean delay per day (weighted by # of flights) Wyoming") +
+  scale_x_date(expand=c(0,0)) +
+  scale_color_discrete(name = "destination state") +
+  theme(legend.position = "none",
+        axis.title = element_text(size=12))
+
+p1 / p2
+```
+
+## Arrival Delay and Airline Carrier
+
+Finally, we examine delay times per day by airline carrier. There is some variation for the different airline carriers when we account for all points. A one-way ANOVA test shows there are significant differences in delay time for the different airline carriers ($p<<0.05$). Eliminating points greater than 3 standard deviations away from the mean delay for all carriers, we can easily observe differences. Again, a one-way ANOVA test garners the same result, though it is less statistically significant ($p=0.02$). 
+
+```{r arrival delay by airline carrier, cache=TRUE, fig.width=16, fig.height=10}
+p1 <- ggplot(group_carrier_ts) +
+  geom_boxplot(aes(y=delay_mean_on_given_day, x=reorder(mkt_unique_carrier,delay_mean_on_given_day, mean),
+               fill=mkt_unique_carrier)) +
+  geom_hline(yintercept = mean(group_carrier_ts$delay_mean_on_given_day), alpha=0.5, col="red", size=1) +
+  scale_fill_brewer(palette="Set3") +
+  theme(legend.position = "none",
+        axis.title = element_text(size=12)) +
+  labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier")
+
+#test for differences in carrier delay times
+summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=group_carrier_ts))
+
+#test for differences, removing delays more than 3 standard deviations away from the mean delay time
+sds <- mean(group_carrier_ts$delay_mean_on_given_day) + (c(-3,3) * sd(group_carrier_ts$delay_mean_on_given_day))
+outlier.omit <- group_carrier_ts %>% 
+  filter(delay_mean_on_given_day<sds[1] | delay_mean_on_given_day>sds[2])
+
+p2 <- ggplot(outlier.omit) +
+  geom_boxplot(aes(y=delay_mean_on_given_day, x=reorder(mkt_unique_carrier,delay_mean_on_given_day, mean),
+               fill=mkt_unique_carrier)) +
+  geom_hline(yintercept = mean(group_carrier_ts$delay_mean_on_given_day), alpha=0.5, col="red", size=1) +
+  scale_fill_brewer(palette="Set3") +
+  theme(legend.position = "none",
+        axis.title = element_text(size=12)) +
+  labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier (delays > 3 SD from mean removed)")
+
+summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=outlier.omit))
+
+p1 | p2
+```
+
 
 # Evaluations
 
