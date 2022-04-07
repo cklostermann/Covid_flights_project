@@ -437,3 +437,12 @@ One thing we want to improve is the logic behind our visualizations.
 From initial explorations, we are visualizing each of the variables with arrival delay time to find the trend inside the data. 
 We divide visualization into sections and have clear logic inside of each section. 
 We could explain the relationship between each of the sections and how it goes from the first graph to the last one.
+
+Caitlyn's Work:
+Caitlyn has good visualizations. There are many meaningful comparisons between variables, such as mean delay vs time, and mean delay vs airline carrier. The graphs give meaningful insight into these comparisons and show what we are trying to prove well.
+
+Some strong points of these graphs are the clean layout and formatting, easy-to-identify color scheme, and use of appropriate plot types. 
+
+One weak point is hard-to-read text. The axis labels are titles are so small you cannot read them unless you zoom in.
+
+The graphs are very visually appealing and show pertinent information for project.  To improve these plots, we will make the labels and text size easier to read.
