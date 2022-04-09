@@ -4,6 +4,10 @@ author: "Group 2"
 date: "4/10/2022"
 output: html_document
 ---
+```{r, global_options, include = FALSE}
+knitr::opts_chunk$set(message = FALSE, tidy.opts = list(width.cutoff = 60), tidy = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -15,31 +19,34 @@ library(tsibble)
 library(tsibbledata)
 library(lubridate)
 library(feasts)
+library(readr)
 ```
+
 # Guiding Question
 What factors affected flight delays between January and June 2020? 
 
 # Introduction and Overview of Data
   This study is exploring factors that contributed to arrival delays in U.S. airline traffic during the beginning of the COVID-19 pandemic. Two two primary data sets were used: the first contains information related to airline flights, flight date, arrival delays, destination state, air time, distance, and flight carrier. The second contains information about COVID-19 cases and deaths by state since the start of the pandemic. 
-  Out of 47 variables, 19 were explored based on what was deemed relevant to the guiding question. We also joined the Flights data set with a COVID dataset (by date and state [of departure]) to get access to two more variables, cases and deaths, for a total of 21 variables. 
-	Many observations contained “NA” values (roughly 89% of the data) and the “canceled” variable was causing this feature, as the other delay statistics could not pertain to a flight that had never taken off. As these “NA” features were logical, the corresponding rows were kept in the dataset. However, there were some “NA” values in the Flights dataset and the corresponding observations were removed (~0.2% of the data).
-	After the removal of incomplete observations, Kolmogorov-Smirnov and Chi-Squared tests were run to confirm that the new data retained the original distribution.
+  Out of 47 variables, 19 were explored based on what was deemed relevant to the guiding question. We also joined the Flights data set with a COVID data set (by date and state [of departure]) to get access to two more variables, cases and deaths, for a total of 21 variables. 
+	Many observations contained “NA” values (roughly 89% of the data) and the “canceled” variable was causing this feature, as the other delay statistics could not pertain to a flight that had never taken off. As these “NA” features were logical, the corresponding rows were kept in the data set. However, there were some “NA” values in the Flights data set and the corresponding observations were removed (~0.2% of the data).
 
 # Data Processing 
-```{r data processing, cache = TRUE}
-flights <- read.csv("./jantojun2020.csv")
-us_states <- read.csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
+```{r data processing, cache = TRUE, message = FALSE}
+flights <- read_csv("./jantojun2020.csv")
+us_states <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
+
 desired_cols <- c(2,3,4,5,6,7,10,13,14,17,18,20,25,28,29,31,36,40,41) # desired columns
-names(flights[,desired_cols]) # columns kept
 flights2 <- flights[,desired_cols] # dataframe with correct columns
+
 clean_flights0 <- flights2 %>% # correcting column data types
   mutate(DISTANCE = as.double(DISTANCE)) %>% 
   mutate(CANCELLED = as.logical(CANCELLED)) %>%
   mutate(FL_DATE = as.Date(FL_DATE,format = "%m/%d/%y"))
+
 us_states2 <- us_states [,-3] %>% # removing "fips" column and dates after flights dataset
   mutate(date = as.Date(date)) %>%
   subset(date <= max(clean_flights0$FL_DATE)) # dropping data after the latest flight date
-length(which(rowSums(is.na(us_states2)) > 0)) # checking number of rows with NA values in data set
+
 # CANCELLED column leaves NA in other columns
 clean_flights0_length <- nrow(clean_flights0) # number of rows in dataset
 # number of not cancelled flights with missing data
@@ -49,15 +56,14 @@ num_na_rows <- length(which(rowSums(is.na(clean_flights0)) > 0 &
 share_na <- num_na_rows / clean_flights0_length
 # number of fully filled rows
 num_filled_rows <- clean_flights0_length - num_na_rows 
-# share of rows with missing information
-share_na
-# number of rows with full information
-num_filled_rows
+
 # rows  with missing information
 bad_rows <- which(rowSums(is.na(clean_flights0)) > 0 & 
                     clean_flights0$CANCELLED == 0)
+
 # eliminating incomplete rows
 clean_flights1 <- clean_flights0[-bad_rows,]
+
 c_clean <- clean_flights1 %>% # non-numeric dates
             select_if(is.double)
 # only continuous columns w/ NA values
@@ -73,40 +79,44 @@ d_clean1 <- clean_flights1 %>% select_if(Negate(is.double))
 # only continuous columns w/ NA values (randomly sampled)
 sampled_rows <- sample(1:nrow(d_clean1), nrow(d_clean1), replace = FALSE)
 d_clean0 <- clean_flights0[sampled_rows,]
+
 new_flights <- cbind(d_clean1, c_clean)
+
 # left join by date and ORIGIN STATE
 fulldata <- left_join(new_flights, us_states2, by = c(c("FL_DATE" = "date"), c("ORIGIN_STATE_NM" = "state")))
+
 # removing rows that have cases or deaths as "NA"
 num_na_rows <- length(which(is.na(fulldata$cases) == TRUE | is.na(fulldata$deaths) == TRUE)) 
 bad_rows <- which(is.na(fulldata$cases) == TRUE | is.na(fulldata$deaths) == TRUE)
 fulldata2 <- fulldata[-bad_rows,]
+
 # converting NA values to 0
 fulldata3 <- fulldata
 fulldata3[is.na(fulldata)] <- 0
 fulldata3 <- fulldata3 %>%
   mutate(cases = as.integer(cases)) %>% # making discrete column integer
   mutate(deaths = as.integer(deaths)) # making discrete column integer
-head(fulldata3) # NA values are converted to 0
 ```
-
 
 # Analysis of Key Variables
 ```{r random sample, include = FALSE}
-#variables jonah works on
 slim_data = fulldata3 %>% 
   select(ARR_DELAY, DISTANCE, ORIGIN, ORIGIN_STATE_NM, deaths)
 names(slim_data) = tolower(names(slim_data))
+
 #speed up initial plot development by randomly sampling 10% of the population
 sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
-fulldata3_copy = fulldata3 #so i can change the col names to lowercase to work with code I have written without messing up others code
+
+#so i can change the col names to lowercase to work with code I have written without messing up others code
+fulldata3_copy = fulldata3
 names(fulldata3_copy) = tolower(names(fulldata3_copy))
+
 #slim_sample is now the full data so plots represent all data
 slim_sample = fulldata3_copy #slim_data[sample_row_index,]  
 ```
 
 ## Arrival Delay and Distance
-One might think that longer flights are expected to have longer delays. This turns out not to be true. Arrival delays and flight distance are very weakly correlated, with a spearman correlation coefficient (able to detect non-linear trends) of only -0.022. A scatterplot between these two variables suggests that these variables are relatively unrelated as well. 
-
+  One might think that longer flights are expected to have longer delays. This turns out not to be true. Arrival delays and flight distance are very weakly correlated, with a spearman correlation coefficient (able to detect non-linear trends) of only -0.022. A scatter plot between these two variables suggests that these variables are relatively unrelated as well. 
 ```{r arrival delay and distance, cache = TRUE}
 no_delay = sum(slim_sample$arr_delay <= 0) / length(slim_sample$arr_delay) 
 correlation = cor(slim_sample$arr_delay, slim_sample$distance, method = "spearman")
@@ -117,11 +127,9 @@ ggplot(slim_sample, aes(distance, arr_delay)) +
        title = "Distance vs Arrival Delay")
 ```
 
-
-Alternatively, we can examine boxplots of flight distance grouped by every 1000 miles, and see that the distribution of arrival delays is nearly identical in all cases. Outliers have been removed because they obscure most of the distributions since there are some very high outliers. Note that the third quartile is near zero for every boxplot, meaning that 75% of the flights actually arrive on time or early. 
-
+  Alternatively,  box plots of flight distance grouped by every 1000 miles be examined; the distribution of arrival delays is nearly identical in all cases. Outliers have been removed because they obscure most of the distributions since there are some very clear outliers. Note that the third quantile is near zero for every box plot, meaning that 75% of the flights actually arrive on time or early. 
 ```{r arrival delay and distance 2, cache = TRUE}
-#calculate quantiles to filter out outliers 
+# calculate quantiles to filter out outliers 
 iqr =  quantile(slim_sample$arr_delay, 0.75) - quantile(slim_sample$arr_delay, 0.25)
 upper_outlier_q = quantile(slim_sample$arr_delay, 0.75) + 1.5 * iqr
 lower_outlier_q = quantile(slim_sample$arr_delay, 0.25) - 1.5 * iqr
@@ -137,8 +145,7 @@ ggplot(aes(distance, arr_delay)) +
 
 
 ## Arrival Delay and Covid Deaths
-Arrival delays were compared with covid deaths on that particular day, serving as a proxy for the severity of covid. Even though these data are from near the peak of covid, only 42% of the dates in this range have any covid deaths at all. The Spearman correlation coefficient for arrival delays and deaths is -0.05. A graphical approach with the scatterplot also suggests a weak association.
-
+  Arrival delays were compared with COVID deaths on that particular day, serving as a proxy for the severity of COVID" Even though these data are from near the peak of COVID, only 42% of the dates in this range have any COVID deaths at all. The Spearman's correlation coefficient for arrival delays and deaths is -0.05. A graphical approach with the scatter plot also suggests a weak association.
 ```{r arrival delay and deaths, cache = TRUE}
 death_correlation = cor(slim_sample$arr_delay, slim_sample$deaths, method = "spearman")
 zero_death_days = sum(slim_sample$deaths == 0) / length(slim_sample$deaths)
@@ -150,10 +157,10 @@ ggplot(slim_sample, aes(deaths, arr_delay)) +
 ```
 
 ## Arrival Delay and Origin
-One variable that seems to significantly influence arrival delays is the airport the flight originated from. A one way ANOVA test of delay modeled by origin reveals that there are statistically significant differences in arrival delays among airports (p-value = $1*10^{-163}$. The rejection of the null hypothesis is unsurprising as there are 375 airports in the data set. The best and the worst airports to fly from are shown below.
-
+  One variable that seems to significantly influence arrival delays is the airport the flight originated from. A one way ANOVA test of delay modeled by origin reveals that there are statistically significant differences in arrival delays among airports (p-value = $1*10^{-163}$. The rejection of the null hypothesis is unsurprising as there are 375 airports in the data set. The best and the worst airports to fly from are shown below.
 ```{r anova origin, cache = TRUE}
-#The full data set is too large to run ANOVA on, but running it on a randomly sampled subset reveals that the null is rejected with a pvalue of essentially 0
+# The full data set is too large to run ANOVA on,
+# but running it on a randomly sampled subset reveals that the null is rejected with a pvalue of essentially 0.
 sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
 slim_sample = slim_data[sample_row_index,] 
 model = aov(arr_delay ~ origin, data = slim_sample)
@@ -186,15 +193,11 @@ p1 + p2
 ```
 
 ## Arrival Delay and Number of Flights During the Onset of the COVID-19 Pandemic
-
-We notice a that there is an initial increase in mean delay times during the first month of the COVID-19 pandemic indicated by an upward spike, and that mean delay times dip slightly after the initial spike during the pandemic with greater variation times in some states.
-
+  It is noticed that there is an initial increase in mean delay times during the first month of the COVID-19 pandemic indicated by an upward spike, and that mean delay times dip slightly after the initial spike during the pandemic with greater variation times in some states.
 ```{r formatting data for time series, cache=TRUE}
 slim_data2 = fulldata3 %>% 
   select(ARR_DELAY, FL_DATE, DEST_STATE_NM, cases, MKT_UNIQUE_CARRIER)
 names(slim_data2) = tolower(names(slim_data2)) 
-
-
 group_cols <- c("fl_date", "dest_state_nm")
 #group data by date and destination, and summarize mean delays and cases
 group_state <- slim_data2 %>%
@@ -204,8 +207,6 @@ group_state <- slim_data2 %>%
 group_state <- as.data.frame(group_state) #ungroup for sibble
 #tsibble indexed by date 
 group_state_ts <- as_tsibble(group_state, key = c("dest_state_nm"))
-
-
 #group data by date and carrier, and summarize mean delays and cases
 group_carrier <- slim_data2 %>%
   group_by(across(all_of(c("fl_date", "mkt_unique_carrier")))) %>%
@@ -214,8 +215,6 @@ group_carrier <- slim_data2 %>%
 group_carrier <- as.data.frame(group_carrier) #ungroup for sibble
 #tsibble indexed by date 
 group_carrier_ts <- as_tsibble(group_carrier, key = c("mkt_unique_carrier"))
-
-
 ```
 
 ```{r Midwest and Western US time series, cache=TRUE, fig.width=12, fig.height=10}
@@ -227,7 +226,6 @@ midwest <- group_state_ts %>%
            dest_state_nm=="Missouri" | dest_state_nm=="Nebraska" |
            dest_state_nm=="North Dakota" | dest_state_nm=="Ohio" |
            dest_state_nm=="South Dakota" | dest_state_nm=="Wisconsin") 
-
 western <- group_state_ts %>%
   filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
            dest_state_nm=="California" | dest_state_nm=="Colorado" |
@@ -236,7 +234,6 @@ western <- group_state_ts %>%
            dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
            dest_state_nm=="Utah" | dest_state_nm=="Washington" |
            dest_state_nm=="Wyoming")
-
 #mean cases per day by midwest destination state (after March 2020)
 p1 <- ggplot(midwest%>%filter(fl_date>="2020-03-01")) +
         geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
@@ -248,7 +245,6 @@ p1 <- ggplot(midwest%>%filter(fl_date>="2020-03-01")) +
         scale_x_date(expand=c(0,0)) +
         theme(axis.title = element_text(size=10),
               legend.position = "bottom")
-
 #mean delay time per day by selected midwest destination state
 p2 <- ggplot(midwest) +
         geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=dest_state_nm)) +
@@ -260,7 +256,6 @@ p2 <- ggplot(midwest) +
         ylim(-20,100) +
         theme(legend.position = "none",
               axis.title = element_text(size=10))
-
 #mean cases per day by western destination state
 p3 <- ggplot(western%>%filter(fl_date>="2020-03-01")) +
         geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
@@ -272,7 +267,6 @@ p3 <- ggplot(western%>%filter(fl_date>="2020-03-01")) +
         scale_x_date(expand=c(0,0)) +
         theme(axis.title = element_text(size=10),
               legend.position = "bottom")
-
 #mean delay time per day by western destination state 
 p4 <- ggplot(western) +
         geom_line(aes(x = fl_date, y = delay_mean_on_given_day, col=dest_state_nm)) +
@@ -286,41 +280,32 @@ p4 <- ggplot(western) +
 (p1 / p2) | (p3/p4)
 ```
 
-To test whether delays during the pandemic were significantly different than previously, we split the data by date at the point 2020-03-11. A Kolmogorov-Smirnov test to test whether the distributions of delays per day are significantly different pre-pandemic and during the pandemic reveals that delays are in fact different ($p<<0.05$). Mean delay time per day pre-pandemic ($-0.53 \pm 12.80$) was greater than mean delay time per day ($-7.88 \pm 9.61$) during the pandemic. 
-
+  To test whether delays during the pandemic were significantly different than previously, the data is split by date at the point 2020-03-11. A Kolmogorov-Smirnov test is run to test whether the distributions of delays per day are significantly different pre-pandemic and during the pandemic reveals that delays are in fact different ($p<<0.05$). Mean delay time per day pre-pandemic ($-0.53 \pm 12.80$) was greater than mean delay time per day ($-7.88 \pm 9.61$) during the pandemic. 
 ```{r k-s test, cache=TRUE}
 pre_pandemic <- group_state_ts %>%
   filter(fl_date < "2020-03-11")
-
 pandemic <- group_state_ts %>%
   filter(fl_date >= "2020-03-11")
-
 mean(pre_pandemic$delay_mean_on_given_day) #mean delay time pre-pandemic
 sd(pre_pandemic$delay_mean_on_given_day)
 mean(pandemic$delay_mean_on_given_day) #mean delay time pandemic
 sd(pandemic$delay_mean_on_given_day)
-
 #Kolmogorov-Smirnov test for difference in distributions of mean delays per day for pre-pandemic and pandemic flights
 ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
-
 ```
 
-California has the top 10 number of flights per day, and 8 of these dates are just before or just after March 11, 2020.
-
-```{r number of flights time series, cache=TRUE, fig.height=5, fig.width=8}
+  California has the top 10 number of flights per day, and 8 of these dates are just before or just after March 11, 2020.
+```{r number of flights time series, cache = TRUE, fig.height = 5, fig.width = 8}
 #count number of flights per day for each destination state
 number_flights <- slim_data2 %>%
   group_by(dest_state_nm) %>%
   count(fl_date, sort=TRUE)
-
 most_flights <- number_flights[0:10,] #CA has 10 of the top 10 number of flight days by state
-
 number_flights_ts <- slim_data2 %>%
   group_by(dest_state_nm) %>%
   count(fl_date, sort=TRUE) %>%
   as.data.frame() %>%
   as_tsibble(key="dest_state_nm")
-
 #just looking at western states again since California has the most flights
 western_no <- number_flights_ts %>%
   filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
@@ -330,7 +315,6 @@ western_no <- number_flights_ts %>%
            dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
            dest_state_nm=="Utah" | dest_state_nm=="Washington" |
            dest_state_nm=="Wyoming")
-
 ggplot(western_no) +
   geom_line(aes(x = fl_date, y = n, col=dest_state_nm)) +
   scale_fill_hue(l=100) +
@@ -340,10 +324,9 @@ ggplot(western_no) +
   scale_color_discrete(name = "destination state") +
   theme(legend.position = "bottom",
         axis.title = element_text(size=10))
-
 ```
-Weighting mean delay per day by number of flights for each destination state, allowed us to more clearly see the dip in delays after the onset of the pandemic. We eliminated Wyoming from this plot of Western states' weighted delays as this state actually has higher mean delay times during the pandemic. 
 
+  Weighting mean delay per day by number of flights for each destination state, allows to more clearly see the dip in delays after the onset of the pandemic. Wyoming is eliminated from this plot of Western states' weighted delays as this state actually has higher mean delay times during the pandemic. 
 ```{r delays weighted by number of flights, cache=TRUE, fig.height=12, fig.width=8}
 avg_delay_w_count <- slim_data2 %>%
   group_by(dest_state_nm) %>%
@@ -352,14 +335,12 @@ avg_delay_w_count <- slim_data2 %>%
   summarise(mean_delay=mean(arr_delay), n=mean(n)) %>%
   as.data.frame() %>%
   as_tsibble(key="dest_state_nm")
-
 wt_delay_by_no <- avg_delay_w_count %>%
   as.data.frame() %>%
   group_by(fl_date) %>%
   summarise(wt_delay=mean_delay/n, dest_state_nm=dest_state_nm) %>%
   as.data.frame() %>%
   as_tsibble(key="dest_state_nm")
-
 #just looking at western states again since California has the most flights
 western_wt_no <- wt_delay_by_no %>%
   filter(dest_state_nm=="Alaska" | dest_state_nm=="Arizona" |
@@ -369,7 +350,6 @@ western_wt_no <- wt_delay_by_no %>%
            dest_state_nm=="New Mexico" | dest_state_nm=="Oregon" |
            dest_state_nm=="Utah" | dest_state_nm=="Washington") #|
            #dest_state_nm=="Wyoming")
-
 p1 <- ggplot(western_wt_no) +
     geom_line(aes(x = fl_date, y = wt_delay, col=dest_state_nm)) +
   scale_fill_hue(l=100) +
@@ -379,7 +359,6 @@ p1 <- ggplot(western_wt_no) +
   scale_color_discrete(name = "destination state") +
   theme(legend.position = "bottom",
         axis.title = element_text(size=12))
-
 p2 <- ggplot(wt_delay_by_no %>% filter(dest_state_nm == "Wyoming")) +
     geom_line(aes(x = fl_date, y = wt_delay), col="#FF689F") +
   scale_fill_hue(l=100) +
@@ -389,14 +368,11 @@ p2 <- ggplot(wt_delay_by_no %>% filter(dest_state_nm == "Wyoming")) +
   scale_color_discrete(name = "destination state") +
   theme(legend.position = "none",
         axis.title = element_text(size=12))
-
 p1 / p2
 ```
 
 ## Arrival Delay and Airline Carrier
-
-Finally, we examine delay times per day by airline carrier. There is some variation for the different airline carriers when we account for all points. A one-way ANOVA test shows there are significant differences in delay time for the different airline carriers ($p<<0.05$). Eliminating points greater than 3 standard deviations away from the mean delay for all carriers, we can easily observe differences. Again, a one-way ANOVA test garners the same result, though it is less statistically significant ($p=0.02$). 
-
+  Finally, delay times per day by airline carrier are examined. There is some variation for the different airline carriers when all points are accounted for. A one-way ANOVA test shows there are significant differences in delay time for the different airline carriers ($p<<0.05$). Eliminating points greater than 3 standard deviations away from the mean delay for all carriers, differences are easily observable. Again, a one-way ANOVA test garners the same result, though it is less statistically significant ($p=0.02$). 
 ```{r arrival delay by airline carrier, cache=TRUE, fig.width=16, fig.height=10}
 p1 <- ggplot(group_carrier_ts) +
   geom_boxplot(aes(y=delay_mean_on_given_day, x=reorder(mkt_unique_carrier,delay_mean_on_given_day, mean),
@@ -406,15 +382,12 @@ p1 <- ggplot(group_carrier_ts) +
   theme(legend.position = "none",
         axis.title = element_text(size=12)) +
   labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier")
-
 #test for differences in carrier delay times
 summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=group_carrier_ts))
-
 #test for differences, removing delays more than 3 standard deviations away from the mean delay time
 sds <- mean(group_carrier_ts$delay_mean_on_given_day) + (c(-3,3) * sd(group_carrier_ts$delay_mean_on_given_day))
 outlier.omit <- group_carrier_ts %>% 
   filter(delay_mean_on_given_day<sds[1] | delay_mean_on_given_day>sds[2])
-
 p2 <- ggplot(outlier.omit) +
   geom_boxplot(aes(y=delay_mean_on_given_day, x=reorder(mkt_unique_carrier,delay_mean_on_given_day, mean),
                fill=mkt_unique_carrier)) +
@@ -423,32 +396,14 @@ p2 <- ggplot(outlier.omit) +
   theme(legend.position = "none",
         axis.title = element_text(size=12)) +
   labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier (delays < 3 SD from mean removed)")
-
 summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=outlier.omit))
-
 p1 | p2
 ```
 
-
-<<<<<<< HEAD
 # Discussion of Plots
-Overall good visualizations, clearly shows the trend between flight delays, origin airports, flight distance, and deaths. 
-There are many meaningful comparisons between variables, such as mean delay vs time, and mean delay vs airline carrier. The graphs give meaningful insight into these comparisons and show what we are trying to prove well.
-Some strong points of these graphs are the clean layout and formatting, easy-to-identify color scheme, and use of appropriate plot types. 
+  Overall the visualizations are strong and clearly shows the trend between flight delays, origin airports, flight distance, and deaths. There are many meaningful comparisons between variables, such as mean delay vs. time and mean delay vs. airline carrier. The graphs give meaningful insight into these comparisons and show what is attempted to prove well. Some strong points of these graphs are the clean layout and formatting, easy-to-identify color scheme, and use of appropriate plot types. 
 
-=======
 # Discussion of Improvements
->>>>>>> e2554052f6cb7b17b30a7aa48f93dd46db026644
+  Color coding the points in graph "Death vs. Delays" and "Distance vs. Delays" with states might make the visualization richer in information. It may be better to customize the opacity and size of the dots so that it is clearer for readers see each points rather than a black area. Probably removing the gaps between bars/dots and x, y axis makes the visualization look better.
 
-Color coding the points in graph "Death vs Delays" and "Distance vs Delays" with states might make the visualization richer in information.  
-It may be better to customize the opacity and size of the dots so that it is clearer for readers see each points rather than a black area. 
-Probably removing the gaps between bars/dots and x, y axis makes the visualization look better.
-
-One thing we want to improve is the logic behind our visualizations. 
-From initial explorations, we are visualizing each of the variables with arrival delay time to find the trend inside the data. 
-We divide visualization into sections and have clear logic inside of each section. 
-We could explain the relationship between each of the sections and how it goes from the first graph to the last one.
-
-One weak point is hard-to-read text. The axis labels are titles are so small you cannot read them unless you zoom in.
-
-The graphs are very visually appealing and show pertinent information for project.  To improve these plots, we will make the labels and text size easier to read.
+  One thing we want to improve is the logic behind our visualizations. From initial explorations, we are visualizing each of the variables with arrival delay time to find the trend inside the data. We divide visualization into sections and have clear logic inside of each section. We could explain the relationship between each of the sections and how it goes from the first graph to the last one. One weak point is the hard-to-read text. The axis labels are titles are so small you cannot read them unless you zoom in. The graphs are very visually appealing and show pertinent information for project. To improve these plots, we will make the labels and text size easier to read.
