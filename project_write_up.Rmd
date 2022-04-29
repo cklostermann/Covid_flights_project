@@ -144,37 +144,49 @@ longest_origin_delays = slim_sample %>%
   group_by(origin) %>% 
   summarize(mean_delay = mean(arr_delay)) %>% 
   arrange(desc(mean_delay)) %>% 
-  head(5)
+  head(10)
 
 shortest_origin_delays = slim_sample %>% 
   group_by(origin) %>% 
   summarize(mean_delay = mean(arr_delay)) %>% 
   arrange(desc(mean_delay)) %>% 
-  tail(5)
+  tail(10)
 
 p1 = ggplot(longest_origin_delays) + 
   geom_col(aes(mean_delay, rev(reorder(origin, mean_delay)))) +
   labs(x = "Mean Delay (min)", 
        y = "Origin",
-       title = "5 Worst Airports to Fly From") +
+       title = "10 Worst Airports to Fly From") +
   scale_y_discrete(labels = c("Sheridan, WY",
                               "Lewiston, ID",
                               "W. Regional, NE",
                               "Hattiesburg, MI",
-                              "Cold Bay, AL"))
+                              "Cold Bay, AL",
+                              "Yellowstone, WY",
+                              "Mobile Bay, AL",
+                              "Cheyenne, WY",
+                              "Hobs, NM",
+                              "Saywer, MI"))
 
 p2 = ggplot(shortest_origin_delays) + 
   geom_col(aes(abs(mean_delay), reorder(origin, mean_delay),)) +
   labs(x = "Mean Minutes Arrived Early", 
        y = "",
-       title = "5 Best Airports to Fly From") +
+       title = "10 Best Airports to Fly From") +
   scale_y_discrete(labels = c("Lib. Regional, KS",
                               "Decatur, IL",
                               "Yakutat, AK",
                               "Int. Falls, MN",
-                              "Pierre, SD"))
+                              "Pierre, SD",
+                              "Houghton, MI",
+                              "Martha's Vineyard, MA", 
+                              "Quincy, IL", 
+                              "W. Yellowstone", 
+                              "Pudacah, KY"))
  
-p1 + p2
+p = p1 + p2
+p
+#ggsave("airport.jpeg", p, width = 10, height = 7, units = "in")
 ```
 
 ## Arrival Delay and Number of Flights During the Onset of the COVID-19 Pandemic
