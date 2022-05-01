@@ -27,92 +27,49 @@ What factors affected flight delays between January and June 2020?
 
 # Introduction and Overview of Data
   This study is exploring factors that contributed to arrival delays in U.S. airline traffic during the beginning of the COVID-19 pandemic. Two two primary data sets were used: the first contains information related to airline flights, flight date, arrival delays, destination state, air time, distance, and flight carrier. The second contains information about COVID-19 cases and deaths by state since the start of the pandemic. 
-  Out of 47 variables, 19 were explored based on what was deemed relevant to the guiding question. We also joined the Flights data set with a COVID data set (by date and state [of departure]) to get access to two more variables, cases and deaths, for a total of 21 variables. 
-	Many observations contained “NA” values (roughly 89% of the data) and the “canceled” variable was causing this feature, as the other delay statistics could not pertain to a flight that had never taken off. As these “NA” features were logical, the corresponding rows were kept in the data set. However, there were some “NA” values in the Flights data set and the corresponding observations were removed (~0.2% of the data).
+
 
 # Data Processing 
+ 	The U.S. flights data set contained 47 variables. Out of those variables, 19 were explored based on what was deemed relevant to the guiding question. We also joined the Flights data set with a COVID data set (by date and state [of departure]) to get access to two more variables, cases and deaths, for a total of 21 variables. 
+	Many observations contained “NA” values (roughly 89% of the data) and the “canceled” variable was causing this feature, as the other delay statistics could not pertain to a flight that had never taken off. As these “NA” features were logical, the corresponding rows were kept in the data set. However, there were some “NA” values in the Flights data set and the corresponding observations were removed (~0.2% of the data).
+	
 ```{r data processing, cache = TRUE, message = FALSE}
 flights <- read_csv("./jantojun2020.csv")
 us_states <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
 
 desired_cols <- c(2,3,4,5,6,7,10,13,14,17,18,20,25,28,29,31,36,40,41) # desired columns
-flights2 <- flights[,desired_cols] # dataframe with correct columns
 
-clean_flights0 <- flights2 %>% # correcting column data types
-  mutate(DISTANCE = as.double(DISTANCE)) %>% 
-  mutate(CANCELLED = as.logical(CANCELLED)) %>%
-  mutate(FL_DATE = as.Date(FL_DATE,format = "%m/%d/%y"))
+# selecting columns, correcting column data types, and eliminating incomplete rows
+clean_flights0 <- flights %>%
+  select(desired_cols) %>%
+  mutate(DISTANCE = as.double(DISTANCE),
+         CANCELLED = as.logical(CANCELLED),
+         FL_DATE = as.Date(FL_DATE,format = "%m/%d/%y"))
 
 us_states2 <- us_states [,-3] %>% # removing "fips" column and dates after flights dataset
   mutate(date = as.Date(date)) %>%
   subset(date <= max(clean_flights0$FL_DATE)) # dropping data after the latest flight date
 
-# CANCELLED column leaves NA in other columns
-clean_flights0_length <- nrow(clean_flights0) # number of rows in dataset
-# number of not cancelled flights with missing data
-num_na_rows <- length(which(rowSums(is.na(clean_flights0)) > 0 & 
-                              clean_flights0$CANCELLED == 0)) 
-# share of rows with NA values
-share_na <- num_na_rows / clean_flights0_length
-# number of fully filled rows
-num_filled_rows <- clean_flights0_length - num_na_rows 
+clean_flights1 <- clean_flights0 %>%
+  slice(-which(rowSums(is.na(clean_flights0)) > 0 & 
+                 clean_flights0$CANCELLED == 0))
+# continuous values
+c_clean <- clean_flights1 %>%
+  select_if(is.double)
+# discrete values
+d_clean1 <- clean_flights1 %>% 
+  select_if(Negate(is.double))
 
-# rows  with missing information
-bad_rows <- which(rowSums(is.na(clean_flights0)) > 0 & 
-                    clean_flights0$CANCELLED == 0)
-
-# eliminating incomplete rows
-clean_flights1 <- clean_flights0[-bad_rows,]
-
-c_clean <- clean_flights1 %>% # non-numeric dates
-            select_if(is.double)
-# only continuous columns w/ NA values
-c_clean0 <- clean_flights0 %>% 
-            select_if(is.double) %>%
-            mutate(FL_DATE = as.numeric(clean_flights0$FL_DATE)) 
-# only continuous columns w/o NA values
-c_clean1 <- clean_flights1 %>% 
-            select_if(is.double) %>%
-            mutate(FL_DATE = as.numeric(clean_flights1$FL_DATE)) 
-# only discrete columns w/o NA values
-d_clean1 <- clean_flights1 %>% select_if(Negate(is.double))
-# only continuous columns w/ NA values (randomly sampled)
-sampled_rows <- sample(1:nrow(d_clean1), nrow(d_clean1), replace = FALSE)
-d_clean0 <- clean_flights0[sampled_rows,]
-
+# discrete values, followed by continuous
 new_flights <- cbind(d_clean1, c_clean)
 
 # left join by date and ORIGIN STATE
 fulldata <- left_join(new_flights, us_states2, by = c(c("FL_DATE" = "date"), c("ORIGIN_STATE_NM" = "state")))
 
-# removing rows that have cases or deaths as "NA"
-num_na_rows <- length(which(is.na(fulldata$cases) == TRUE | is.na(fulldata$deaths) == TRUE)) 
-bad_rows <- which(is.na(fulldata$cases) == TRUE | is.na(fulldata$deaths) == TRUE)
-fulldata2 <- fulldata[-bad_rows,]
-
-# converting NA values to 0
-fulldata3 <- fulldata
-fulldata3[is.na(fulldata)] <- 0
-fulldata3 <- fulldata3 %>%
-  mutate(cases = as.integer(cases)) %>% # making discrete column integer
-  mutate(deaths = as.integer(deaths)) # making discrete column integer
-```
-
-# Analysis of Key Variables
-```{r random sample, include = FALSE}
-slim_data = fulldata3 %>% 
-  select(ARR_DELAY, DISTANCE, ORIGIN, ORIGIN_STATE_NM, deaths)
-names(slim_data) = tolower(names(slim_data))
-
-#speed up initial plot development by randomly sampling 10% of the population
-sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
-
-#so i can change the col names to lowercase to work with code I have written without messing up others code
-fulldata3_copy = fulldata3
-names(fulldata3_copy) = tolower(names(fulldata3_copy))
-
-#slim_sample is now the full data so plots represent all data
-slim_sample = fulldata3_copy #slim_data[sample_row_index,]  
+fulldata3 <- fulldata %>%
+  replace(is.na(.), 0) %>% # converting NA values to 0
+  mutate(cases = as.integer(cases), # making discrete column integer
+         deaths = as.integer(deaths)) # making discrete column integer
 ```
 
 ## Arrival Delay and Origin
