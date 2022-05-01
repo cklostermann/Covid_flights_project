@@ -20,6 +20,7 @@ library(tsibbledata)
 library(lubridate)
 library(feasts)
 library(readr)
+library(ggridges)
 ```
 
 # Guiding Question
@@ -70,6 +71,22 @@ fulldata3 <- fulldata %>%
   replace(is.na(.), 0) %>% # converting NA values to 0
   mutate(cases = as.integer(cases), # making discrete column integer
          deaths = as.integer(deaths)) # making discrete column integer
+```
+
+```{r random sample, include = FALSE}
+slim_data = fulldata3 %>% 
+  dplyr::select(ARR_DELAY, DISTANCE, ORIGIN, ORIGIN_STATE_NM, deaths)
+names(slim_data) = tolower(names(slim_data))
+
+#speed up initial plot development by randomly sampling 10% of the population
+sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
+
+#so i can change the col names to lowercase to work with code I have written without messing up others code
+fulldata3_copy = fulldata3
+names(fulldata3_copy) = tolower(names(fulldata3_copy))
+
+#slim_sample is now the full data so plots represent all data
+slim_sample = fulldata3_copy #slim_data[sample_row_index,]  
 ```
 
 ## Arrival Delay and Origin
