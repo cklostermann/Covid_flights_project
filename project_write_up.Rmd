@@ -287,7 +287,7 @@ p2 <- ggplot(midwest_df %>% filter(dest_state_nm==c("Wisconsin","Illinois"))) +
         ylim(-20,100) +
         theme(legend.position = "bottom",
               axis.title = element_text(size=10))
-?scale_color_discrete
+
 #mean cases per day by western destination state
 p3 <- ggplot(western_df %>% filter(fl_date>="2020-03-01")) +
         geom_line(aes(x = fl_date, y = cases_mean_on_given_day, col=dest_state_nm)) +
@@ -379,13 +379,23 @@ p_mid <- ggplot(midwest_df,
 
 p_mid + p_west
 ```
-# Notes
 
-1. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. Transportation Research Interdisciplinary Perspectives, 9. 100277. https://doi.org/10.1016/j.trip.2020.100277.
+  A Kolmogorov-Smirnov test was run to test whether the distributions of delays per day are significantly different pre-pandemic than during the pandemic. The test revealed that delays are significantly different ($p<<0.05$). Mean delay time per day pre-pandemic ($0.22 \pm 13.37$) was greater than mean delay time per day ($-7.64 \pm 9.46$) during the pandemic. 
+  
+```{r k-s test, cache=TRUE, evaluate=FALSE}
+pre_pandemic <- group_state_ts[group_state_ts$pandemic == "pre", ]
+pandemic <- group_state_ts[group_state_ts$pandemic == "during", ]
 
-2. Abate, M., Christidis P., and Purwanto, A.J. (2020). Government support to airlines in the aftermath of the COVID-19 pandemic. Journal of Air Transport Management, 89. 101931. https://doi.org/10.1016/j.jairtraman.2020.101931. 
+#mean(pre_pandemic$delay_mean_on_given_day) #mean delay time pre-pandemic
+#sd(pre_pandemic$delay_mean_on_given_day)
 
-Conclusion:
+#mean(pandemic$delay_mean_on_given_day) #mean delay time pandemic
+#sd(pandemic$delay_mean_on_given_day)
+
+#Kolmogorov-Smirnov test for difference in distributions of mean delays per day for pre-pandemic and pandemic flights
+ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
+```
+# Conclusion
 
 From our six visualizations, readers can observe the airline carriers’ performance during the COVID-19 pandemic. 
 In addition, they can view the best and worst ten airports to fly from and select the better airline carrier. 
@@ -394,3 +404,10 @@ Readers can retrieve the relationship between cases per day and the number of fl
 Although our visualization does not cover a deeper analysis of other flight data, 
 it still provides readers with a solid understanding of the impact of COVID-19 on flights in the United States. 
 We hope our visualization will allow readers to choose the best airline carriers and airports for their travel plans.
+
+# Notes
+
+1. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. Transportation Research Interdisciplinary Perspectives, 9. 100277. https://doi.org/10.1016/j.trip.2020.100277.
+
+2. Abate, M., Christidis P., and Purwanto, A.J. (2020). Government support to airlines in the aftermath of the COVID-19 pandemic. Journal of Air Transport Management, 89. 101931. https://doi.org/10.1016/j.jairtraman.2020.101931. 
+
