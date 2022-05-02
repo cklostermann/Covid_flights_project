@@ -407,7 +407,7 @@ We hope our visualization will allow readers to choose the best airline carriers
 
 # Notes
 
-1. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. Transportation Research Interdisciplinary Perspectives, 9. 100277. https://doi.org/10.1016/j.trip.2020.100277.
+1. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. _Transportation Research Interdisciplinary Perspectives, 9_, 100277. https://doi.org/10.1016/j.trip.2020.100277.
 
-2. Abate, M., Christidis P., and Purwanto, A.J. (2020). Government support to airlines in the aftermath of the COVID-19 pandemic. Journal of Air Transport Management, 89. 101931. https://doi.org/10.1016/j.jairtraman.2020.101931. 
+2. Abate, M., Christidis P., and Purwanto, A.J. (2020). Government support to airlines in the aftermath of the COVID-19 pandemic. _Journal of Air Transport Management, 89_, 101931. https://doi.org/10.1016/j.jairtraman.2020.101931. 
 
