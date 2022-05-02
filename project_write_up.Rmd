@@ -166,7 +166,7 @@ p
 #ggsave("airport.jpeg", p, width = 10, height = 7, units = "in")
 ```
 
-### Arrival Delay and Airline Carrier
+## Arrival Delay and Airline Carrier
   There was some variation in mean delay per day for the different airline carriers. A one-way ANOVA test showed there were significant differences in delay time for the different airline carriers ($p<<0.05$). Eliminating points greater than 3 standard deviations away from the mean delay for all carriers, differences across carriers were easily observable. Again, a one-way ANOVA test garners the same result, though it is less statistically significant ($p=0.02$). 
   
 ```{r formatting data for time series, cache=TRUE, echo=FALSE}
@@ -206,29 +206,42 @@ western_df <- group_state_ts[group_state_ts$dest_state_nm %in% western, ]
 ```
 
 ```{r arrival delay by airline carrier, cache=TRUE, fig.width=16, fig.height=10}
-p1 <- ggplot(group_carrier_ts) +
+group_carrier_ts1 <- group_carrier_ts %>% 
+  mutate(across(mkt_unique_carrier, ~ recode(., "AA" = "American Airlines", "AS" = "Alaska Airlines", "B6" = "JetBlue",
+                                             "DL" = "Delta Air Lines", "F9" = "Frontier Airlines", "G4" = "Allegiant Air",
+                                             "HA" = "Hawaiin Airlines", "NK" = "Spirit Airlines", "UA" = "United Airlines",
+                                             "WN" = "Southwest Airlines")))
+
+p1 <- ggplot(group_carrier_ts1) +
   geom_boxplot(aes(y=delay_mean_on_given_day, x=reorder(mkt_unique_carrier,delay_mean_on_given_day, mean),
                fill=mkt_unique_carrier)) +
   geom_hline(yintercept = mean(group_carrier_ts$delay_mean_on_given_day), alpha=0.5, col="red", size=1) +
   scale_fill_brewer(palette="Set3") +
   theme(legend.position = "none",
-        axis.title = element_text(size=12)) +
+        axis.title = element_text(size=12),
+        axis.text.x = element_text(angle = 45, hjust=1)) +
   labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier")
+
 #test for differences in carrier delay times
-summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=group_carrier_ts))
+#summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=group_carrier_ts1))
+
 #test for differences, removing delays more than 3 standard deviations away from the mean delay time
-sds <- mean(group_carrier_ts$delay_mean_on_given_day) + (c(-3,3) * sd(group_carrier_ts$delay_mean_on_given_day))
-outlier.omit <- group_carrier_ts %>% 
+sds <- mean(group_carrier_ts1$delay_mean_on_given_day) + (c(-3,3) * sd(group_carrier_ts1$delay_mean_on_given_day))
+outlier.omit <- group_carrier_ts1 %>% 
   filter(delay_mean_on_given_day<sds[1] | delay_mean_on_given_day>sds[2])
+
 p2 <- ggplot(outlier.omit) +
   geom_boxplot(aes(y=delay_mean_on_given_day, x=reorder(mkt_unique_carrier,delay_mean_on_given_day, mean),
                fill=mkt_unique_carrier)) +
   geom_hline(yintercept = mean(group_carrier_ts$delay_mean_on_given_day), alpha=0.5, col="red", size=1) +
   scale_fill_brewer(palette="Set3") +
   theme(legend.position = "none",
-        axis.title = element_text(size=12)) +
-  labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier (delays < 3 SD from mean removed)")
-summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=outlier.omit))
+        axis.title = element_text(size=12),
+        axis.text.x = element_text(angle = 45, hjust=1)) +
+  labs(y="Mean delay time per day", x="Airline carrier", title="Mean delay per day by carrier (delays > 3 SD from mean removed)")
+
+#summary(aov(delay_mean_on_given_day ~ mkt_unique_carrier, data=outlier.omit))
+
 p1 | p2
 ```
 
@@ -365,7 +378,7 @@ p_mid <- ggplot(midwest_df,
 
 p_mid + p_west
 ```
-## Notes
+# Notes
 
 1. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. Transportation Research Interdisciplinary Perspectives, 9. 100277. https://doi.org/10.1016/j.trip.2020.100277.
 
