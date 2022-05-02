@@ -27,7 +27,8 @@ library(ggridges)
 What factors affected flight delays between January and June 2020? 
 
 # Introduction and Overview of Data
-  This study is exploring factors that contributed to arrival delays in U.S. airline traffic during the beginning of the COVID-19 pandemic. Two two primary data sets were used: the first contains information related to airline flights, flight date, arrival delays, destination state, air time, distance, and flight carrier. The second contains information about COVID-19 cases and deaths by state since the start of the pandemic. 
+  This study is exploring factors that contributed to arrival delays in U.S. airline traffic during the beginning of the COVID-19 pandemic. Two primary data sets were used: the first contains information related to airline flights, flight date, arrival delays, destination state, air time, distance, and flight carrier. The second contains information about COVID-19 cases and deaths by state since the start of the pandemic. 
+  The aim is to look into how flight arrival delay was impacted by the COVID-19 pandemic. Arrival delay is compared with origin of flight, airline carrier, and number of cases per day per state. Arrival delay is analyzed pre- and post-COVID, of which the start of the pandemic is deemed to be March 13, 2020 (this date chosen because of the dramatic increase in cases on this day).
 
 
 # Data Processing 
@@ -247,7 +248,7 @@ p1 | p2
 
 ## Arrival Delays and Flights During the COVID-19 Pandemic
 
-  Arrival delays were compared with COVID deaths on that particular day, serving as a proxy for the severity of COVID" Even though these data are from near the peak of COVID, only 42% of the dates in this range have any COVID deaths at all. The Spearman's correlation coefficient for arrival delays and deaths is -0.05. A graphical approach with the scatter plot also suggests a weak association.
+  Arrival delays were compared with COVID deaths on that particular day, serving as a proxy for the severity of COVID. Even though these data are from near the peak of COVID, only 42% of the dates in this range have any COVID deaths at all. The Spearman's correlation coefficient for arrival delays and deaths is -0.05. A graphical approach with the scatter plot also suggests a weak association.
   
 ```{r arrival delay and deaths, cache = TRUE, echo=FALSE}
 death_correlation = cor(slim_sample$arr_delay, slim_sample$deaths, method = "spearman")
