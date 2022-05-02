@@ -116,7 +116,7 @@ model = aov(arr_delay ~ origin, data = slim_sample)
 results = anova(model)
 ```
 
-```{r arrival delay and origin, cache = TRUE}
+```{r arrival delay and origin, cache = TRUE, fig.height = 5, fig.width = 10}
 longest_origin_delays = slim_sample %>% 
   group_by(origin) %>% 
   summarize(mean_delay = mean(arr_delay)) %>% 
@@ -383,3 +383,7 @@ p_mid + p_west
 1. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. Transportation Research Interdisciplinary Perspectives, 9. 100277. https://doi.org/10.1016/j.trip.2020.100277.
 
 2. Abate, M., Christidis P., and Purwanto, A.J. (2020). Government support to airlines in the aftermath of the COVID-19 pandemic. Journal of Air Transport Management, 89. 101931. https://doi.org/10.1016/j.jairtraman.2020.101931. 
+
+Conclusion:
+
+From our six visualizations, readers can observe the airline carriers’ performance during the COVID-19 pandemic. In addition, they can view the best and worst ten airports to fly from and select the better airline carrier. From time series analysis, the trend of the number of flights during the pandemic is shown along with the mean COVID cases per day. Readers can retrieve the relationship between cases per day and the number of flights. Although our visualization does not cover a deeper analysis of other flight data, it still provides readers with a solid understanding of the impact of COVID-19 on flights in the United States. We hope our visualization will allow readers to choose the best airline carriers and airports for their travel plans.
