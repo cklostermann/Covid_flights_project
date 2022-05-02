@@ -386,4 +386,10 @@ p_mid + p_west
 
 Conclusion:
 
-From our six visualizations, readers can observe the airline carriers’ performance during the COVID-19 pandemic. In addition, they can view the best and worst ten airports to fly from and select the better airline carrier. From time series analysis, the trend of the number of flights during the pandemic is shown along with the mean COVID cases per day. Readers can retrieve the relationship between cases per day and the number of flights. Although our visualization does not cover a deeper analysis of other flight data, it still provides readers with a solid understanding of the impact of COVID-19 on flights in the United States. We hope our visualization will allow readers to choose the best airline carriers and airports for their travel plans.
+From our six visualizations, readers can observe the airline carriers’ performance during the COVID-19 pandemic. 
+In addition, they can view the best and worst ten airports to fly from and select the better airline carrier. 
+From time series analysis, the trend of the number of flights during the pandemic is shown along with the mean COVID cases per day. 
+Readers can retrieve the relationship between cases per day and the number of flights. 
+Although our visualization does not cover a deeper analysis of other flight data, 
+it still provides readers with a solid understanding of the impact of COVID-19 on flights in the United States. 
+We hope our visualization will allow readers to choose the best airline carriers and airports for their travel plans.
