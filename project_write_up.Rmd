@@ -27,7 +27,7 @@ library(ggridges)
 How did significant factors affect airline flight delays before and during COVID-19? 
 
 # Introduction and Overview of Data
-  This study is exploring factors that contributed to arrival delays in U.S. airline traffic during the beginning of the COVID-19 pandemic. Two primary data sets were used: the first contains information related to airline flights, flight date, arrival delays, destination state, air time, distance, and flight carrier. The second contains information about COVID-19 cases and deaths by state since the start of the pandemic. 
+  This study is exploring factors that contributed to arrival delays in U.S. airline traffic during the beginning of the COVID-19 pandemic. Two primary data sets were used. The first data set was found on Kaggle, but was collected from the U.S. Department of Transportation's (DOT) Bureau of Transportation Statistics (Transportation, 2020); and contains information related to airline flights, flight date, arrival delays, destination state, air time, distance, and flight carrier. The second data set is from an ongoing repository of data on coronavirus cases and deaths in the U.S., from the New York Times (Coronavirus, 2022); and contains information about COVID-19 cases and deaths by state since the start of the pandemic. 
   The aim is to look into how flight arrival delay was impacted by the COVID-19 pandemic. Arrival delay is compared with origin of flight, airline carrier, and number of cases per day per state. Arrival delay is analyzed pre- and post-COVID, of which the start of the pandemic is deemed to be March 1, 2020 (this date chosen because of the dramatic increase in cases during this month).
 
 
@@ -407,7 +407,11 @@ We hope our visualization will allow readers to choose the best airline carriers
 
 # Notes
 
-1. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. _Transportation Research Interdisciplinary Perspectives, 9_, 100277. https://doi.org/10.1016/j.trip.2020.100277.
+1. Abate, M., Christidis P., and Purwanto, A.J. (2020). Government support to airlines in the aftermath of the COVID-19 pandemic. _Journal of Air Transport Management, 89_, 101931. https://doi.org/10.1016/j.jairtraman.2020.101931. 
 
-2. Abate, M., Christidis P., and Purwanto, A.J. (2020). Government support to airlines in the aftermath of the COVID-19 pandemic. _Journal of Air Transport Management, 89_, 101931. https://doi.org/10.1016/j.jairtraman.2020.101931. 
+2. Coronavirus in the U.S.: Latest Map and Case Count. (2022). _New York Times Company_. Retrieved from https://www.nytimes.com/interactive/2021/us/covid-cases.html. 
+
+3. Hotle, S. and Mumbower, S. (2021). The impact of COVID-19 on domestic U.S. air travel operations and commercial airport service. _Transportation Research Interdisciplinary Perspectives, 9_, 100277. https://doi.org/10.1016/j.trip.2020.100277.
+
+4. Transportation Statistics Annual Report 2020. (2020, December 1). _United States. Department of Transportation. Bureau of Transportation Statistics_. https://doi.org/10.21949/1520449. 
 
