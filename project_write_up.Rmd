@@ -35,7 +35,7 @@ How did significant factors affect airline flight delays before and during COVID
  	The U.S. flights data set contained 47 variables. Out of those variables, 19 were explored based on what was deemed relevant to the guiding question. We also joined the Flights data set with a COVID data set (by date and state [of departure]) to get access to two more variables, cases and deaths, for a total of 21 variables. 
 	Many observations contained “NA” values (roughly 89% of the data) and the “canceled” variable was causing this feature, as the other delay statistics could not pertain to a flight that had never taken off. As these “NA” features were logical, the corresponding rows were kept in the data set. However, there were some “NA” values in the Flights data set and the corresponding observations were removed (~0.2% of the data).
 	
-```{r data processing, cache = TRUE, message = FALSE}
+```{r data processing, cache = TRUE, message = FALSE, echo = FALSE}
 flights <- read_csv("./jantojun2020.csv")
 us_states <- read_csv("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv")
 
@@ -75,7 +75,7 @@ fulldata3 <- fulldata %>%
 ```
 
 # Analysis of Key Variables
-```{r random sample, include = FALSE}
+```{r random sample, echo = FALSE}
 slim_data = fulldata3 %>% 
   select(ARR_DELAY, DISTANCE, ORIGIN, ORIGIN_STATE_NM, deaths)
 names(slim_data) = tolower(names(slim_data))
@@ -90,25 +90,10 @@ names(fulldata3_copy) = tolower(names(fulldata3_copy))
 #slim_sample is now the full data so plots represent all data
 slim_sample = fulldata3_copy #slim_data[sample_row_index,] 
 ```
-```{r random sample, include = FALSE}
-slim_data = fulldata3 %>% 
-  dplyr::select(ARR_DELAY, DISTANCE, ORIGIN, ORIGIN_STATE_NM, deaths)
-names(slim_data) = tolower(names(slim_data))
-
-#speed up initial plot development by randomly sampling 10% of the population
-sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
-
-#so i can change the col names to lowercase to work with code I have written without messing up others code
-fulldata3_copy = fulldata3
-names(fulldata3_copy) = tolower(names(fulldata3_copy))
-
-#slim_sample is now the full data so plots represent all data
-slim_sample = fulldata3_copy #slim_data[sample_row_index,]  
-```
 
 ## Arrival Delay and Origin
   One variable that seems to significantly influence arrival delays is the airport the flight originated from. A one way ANOVA test of delay modeled by origin reveals that there are statistically significant differences in arrival delays among airports (p-value = $1*10^{-163}$. The rejection of the null hypothesis is unsurprising as there are 375 airports in the data set. The best and the worst airports to fly from during the covid pandemic are shown below.
-```{r anova origin, cache = TRUE}
+```{r anova origin, cache = TRUE, echo = FALSE}
 # The full data set is too large to run ANOVA on,
 # but running it on a randomly sampled subset reveals that the null is rejected with a pvalue of essentially 0.
 sample_row_index = sample(1:nrow(slim_data), nrow(slim_data)/10)
@@ -117,7 +102,7 @@ model = aov(arr_delay ~ origin, data = slim_sample)
 results = anova(model)
 ```
 
-```{r arrival delay and origin, cache = TRUE, fig.height = 5, fig.width = 10}
+```{r arrival delay and origin, cache = TRUE, echo = FALSE, fig.height = 5, fig.width = 10}
 longest_origin_delays = slim_sample %>% 
   group_by(origin) %>% 
   summarize(mean_delay = mean(arr_delay)) %>% 
@@ -206,7 +191,7 @@ midwest_df <- group_state_ts[group_state_ts$dest_state_nm %in% midwest, ]
 western_df <- group_state_ts[group_state_ts$dest_state_nm %in% western, ]
 ```
 
-```{r arrival delay by airline carrier, cache=TRUE, fig.width=16, fig.height=10}
+```{r arrival delay by airline carrier, cache=TRUE, fig.width=16, fig.height=10, echo = FALSE}
 group_carrier_ts1 <- group_carrier_ts %>% 
   mutate(across(mkt_unique_carrier, ~ recode(., "AA" = "American Airlines", "AS" = "Alaska Airlines", "B6" = "JetBlue",
                                              "DL" = "Delta Air Lines", "F9" = "Frontier Airlines", "G4" = "Allegiant Air",
@@ -382,7 +367,7 @@ p_mid + p_west
 
   A Kolmogorov-Smirnov test was run to test whether the distributions of delays per day are significantly different pre-pandemic than during the pandemic. The test revealed that delays are significantly different ($p<<0.05$). Mean delay time per day pre-pandemic ($0.22 \pm 13.37$) was greater than mean delay time per day ($-7.64 \pm 9.46$) during the pandemic. 
   
-```{r k-s test, cache=TRUE, evaluate=FALSE}
+```{r k-s test, cache=TRUE, evaluate=FALSE, echo = FALSE, warning=FALSE}
 pre_pandemic <- group_state_ts[group_state_ts$pandemic == "pre", ]
 pandemic <- group_state_ts[group_state_ts$pandemic == "during", ]
 
@@ -393,7 +378,7 @@ pandemic <- group_state_ts[group_state_ts$pandemic == "during", ]
 #sd(pandemic$delay_mean_on_given_day)
 
 #Kolmogorov-Smirnov test for difference in distributions of mean delays per day for pre-pandemic and pandemic flights
-ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
+result = ks.test(pre_pandemic$delay_mean_on_given_day, pandemic$delay_mean_on_given_day)
 ```
 # Conclusion
 
